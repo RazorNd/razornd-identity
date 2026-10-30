@@ -1,6 +1,11 @@
 spring:
   application:
     name: razornd-identity
+  session:
+    data:
+      redis:
+        namespace: razornd:identity:session
+    timeout: 30d
 
 logging:
   group:
