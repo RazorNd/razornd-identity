@@ -16,16 +16,102 @@
 
 package ru.razornd.identity
 
+import com.microsoft.playwright.Page
+import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT
+import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.context.annotation.Import
+import org.springframework.http.MediaType
+import org.springframework.test.context.jdbc.Sql
+import org.springframework.test.web.servlet.client.RestTestClient
+import org.springframework.util.MultiValueMap
+import java.net.URI
+import java.net.URLDecoder
+import java.security.MessageDigest
+import java.security.SecureRandom
+import java.util.*
 
-@Import(TestcontainersConfiguration::class)
-@SpringBootTest
+@AutoConfigureRestTestClient
+@SpringBootTest(
+    webEnvironment = RANDOM_PORT,
+    properties = [
+        "spring.security.oauth2.authorizationserver.client.test.registration.client-id=test-client",
+        "spring.security.oauth2.authorizationserver.client.test.registration.client-secret={noop}test-client-secret",
+        "spring.security.oauth2.authorizationserver.client.test.registration.client-name=test-client",
+        "spring.security.oauth2.authorizationserver.client.test.registration.client-authentication-methods=client_secret_basic,client_secret_post",
+        "spring.security.oauth2.authorizationserver.client.test.registration.authorization-grant-types=authorization_code,refresh_token,client_credentials",
+        "spring.security.oauth2.authorizationserver.client.test.registration.redirect-uris=http://127.0.0.1:8080/login/oauth2/code/test",
+        "spring.security.oauth2.authorizationserver.client.test.registration.scopes=openid,profile",
+        "spring.security.oauth2.authorizationserver.client.test.require-authorization-consent=true"
+    ]
+)
+@Import(TestcontainersConfiguration::class, PlaywrightConfiguration::class)
+@Sql("classpath:sql/create-test-user.sql")
 class IdentityApplicationTests {
+    @LocalServerPort
+    var port: Int = 0
+
+    @Autowired
+    lateinit var client: RestTestClient
 
     @Test
-    fun contextLoads() {
+    fun authorizationCodeFlowReturnsTokens(@Autowired page: Page) {
+        val verifier = base64Url(ByteArray(32).also(SecureRandom()::nextBytes))
+        val challenge = base64Url(MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray()))
+        val authorizationUrl = "http://localhost:$port/oauth2/authorize?response_type=code&client_id=test-client" +
+                "&redirect_uri=http%3A%2F%2F127.0.0.1%3A8080%2Flogin%2Foauth2%2Fcode%2Ftest" +
+                "&scope=openid%20profile&state=functional-test&nonce=functional-test" +
+                "&code_challenge=$challenge&code_challenge_method=S256"
+
+        var callbackUrl: String? = null
+        page.onResponse { response ->
+            response.headers()["location"]
+                ?.takeIf { it.startsWith("http://127.0.0.1:8080/login/oauth2/code/test") }
+                ?.let { callbackUrl = it }
+        }
+        page.navigate(authorizationUrl)
+        page.fill("input[name=username]", "test-user")
+        page.fill("input[name=password]", "test-user-passowrd")
+        page.click("button[type=submit]")
+
+        assertThat(page.getByText("Consent required")).isVisible()
+        page.check("input[name=scope]")
+        page.click("button#submit-consent")
+
+        val callback = URI(callbackUrl ?: page.url())
+        val code = callback.query.split('&')
+            .firstOrNull { it.startsWith("code=") }
+            ?.substringAfter("code=")
+            ?.let { URLDecoder.decode(it, Charsets.UTF_8) }
+            ?: error("Authorization code missing from redirect: ${page.url()}")
+
+        client.post()
+            .uri("/oauth2/token")
+            .headers { it.setBasicAuth("test-client", "test-client-secret") }
+            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+            .body(
+                MultiValueMap.fromSingleValue(
+                    mapOf(
+                        "grant_type" to "authorization_code",
+                        "code" to code,
+                        "redirect_uri" to "http://127.0.0.1:8080/login/oauth2/code/test",
+                        "code_verifier" to verifier
+                    )
+                )
+            )
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody()
+            .jsonPath("$.access_token").isNotEmpty
+            .jsonPath("$.refresh_token").isNotEmpty
+            .jsonPath("$.id_token").isNotEmpty
+            .jsonPath("$.scope").isEqualTo("openid profile")
     }
 
+    private fun base64Url(bytes: ByteArray): String =
+        Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
 }

@@ -51,6 +51,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-grafana")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-postgresql")
+    testImplementation("com.microsoft.playwright:playwright:1.57.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation(kotlin("test"))
     mockitoAgent("org.mockito:mockito-core") {

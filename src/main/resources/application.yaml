@@ -1,3 +1,8 @@
 spring:
   application:
     name: razornd-identity
+
+logging:
+  group:
+    authentication: org.springframework.security.authentication
+    oauth2: org.springframework.security.oauth2
