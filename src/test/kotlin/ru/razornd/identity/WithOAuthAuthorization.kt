@@ -36,13 +36,9 @@ import java.time.Duration
 import java.time.Instant
 import java.util.*
 
-@Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.RUNTIME)
-@ExtendWith(WithOAuthAuthorizationParameterResolver::class)
-annotation class EnableOAuthAuthorizationTestSupport
-
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
+@ExtendWith(WithOAuthAuthorizationParameterResolver::class)
 annotation class WithOAuthAuthorization(
     val registeredClientId: String = "test-client",
     val authorizationId: String = "",

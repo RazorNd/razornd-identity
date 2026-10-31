@@ -20,8 +20,11 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.redis.connection.RedisConnectionFactory
 import org.springframework.data.redis.core.RedisTemplate
+import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer
 import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer
 import org.springframework.data.redis.serializer.StringRedisSerializer
+import org.springframework.security.core.GrantedAuthority
+import org.springframework.security.jackson.SecurityJacksonModules
 import tools.jackson.databind.json.JsonMapper
 
 /** Configures Redis serialization for OAuth 2.0 authorization snapshots. */
@@ -40,6 +43,23 @@ class OAuth2AuthorizationRedisConfiguration {
             setConnectionFactory(connectionFactory)
             keySerializer = StringRedisSerializer()
             valueSerializer = authorizationSerializer
+        }
+    }
+
+    /** Creates the Redis template used to store consent authority sets. */
+    @Bean
+    fun oauth2AuthorizationConsentRedisTemplate(
+        connectionFactory: RedisConnectionFactory,
+        mapperBuilder: JsonMapper.Builder,
+    ): RedisTemplate<String, Set<GrantedAuthority>> {
+        val mapper = mapperBuilder
+            .addModules(SecurityJacksonModules.getModules(javaClass.classLoader))
+            .build()
+
+        return RedisTemplate<String, Set<GrantedAuthority>>().apply {
+            setConnectionFactory(connectionFactory)
+            keySerializer = StringRedisSerializer()
+            valueSerializer = GenericJacksonJsonRedisSerializer(mapper)
         }
     }
 }

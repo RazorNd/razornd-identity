@@ -18,6 +18,7 @@ package ru.razornd.identity
 
 import com.microsoft.playwright.Page
 import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient
@@ -31,6 +32,7 @@ import org.springframework.security.oauth2.core.OAuth2RefreshToken
 import org.springframework.test.context.jdbc.Sql
 import org.springframework.test.web.servlet.client.RestTestClient
 import org.springframework.util.MultiValueMap
+import org.springframework.web.util.DefaultUriBuilderFactory
 import java.net.URI
 import java.net.URLDecoder
 import java.security.MessageDigest
@@ -53,7 +55,6 @@ import java.util.*
 )
 @Import(TestcontainersConfiguration::class, PlaywrightConfiguration::class)
 @Sql("classpath:sql/create-test-user.sql")
-@EnableOAuthAuthorizationTestSupport
 class IdentityApplicationTests {
     @LocalServerPort
     var port: Int = 0
@@ -63,12 +64,7 @@ class IdentityApplicationTests {
 
     @Test
     fun authorizationCodeFlowReturnsTokens(@Autowired page: Page) {
-        val verifier = base64Url(ByteArray(32).also(SecureRandom()::nextBytes))
-        val challenge = base64Url(MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray()))
-        val authorizationUrl = "http://localhost:$port/oauth2/authorize?response_type=code&client_id=test-client" +
-                "&redirect_uri=http%3A%2F%2F127.0.0.1%3A8080%2Flogin%2Foauth2%2Fcode%2Ftest" +
-                "&scope=openid%20profile&state=functional-test&nonce=functional-test" +
-                "&code_challenge=$challenge&code_challenge_method=S256"
+        val authorizationRequest = authorizationRequest()
 
         var callbackUrl: String? = null
         page.onResponse { response ->
@@ -76,7 +72,7 @@ class IdentityApplicationTests {
                 ?.takeIf { it.startsWith("http://127.0.0.1:8080/login/oauth2/code/test") }
                 ?.let { callbackUrl = it }
         }
-        page.navigate(authorizationUrl)
+        page.navigate(authorizationRequest.url)
         page.fill("input[name=username]", "test-user")
         page.fill("input[name=password]", "test-user-passowrd")
         page.click("button[type=submit]")
@@ -101,8 +97,8 @@ class IdentityApplicationTests {
                     mapOf(
                         "grant_type" to "authorization_code",
                         "code" to code,
-                        "redirect_uri" to "http://127.0.0.1:8080/login/oauth2/code/test",
-                        "code_verifier" to verifier
+                        "redirect_uri" to authorizationRequest.redirectUri,
+                        "code_verifier" to authorizationRequest.codeVerifier
                     )
                 )
             )
@@ -113,6 +109,35 @@ class IdentityApplicationTests {
             .jsonPath("$.refresh_token").isNotEmpty
             .jsonPath("$.id_token").isNotEmpty
             .jsonPath("$.scope").isEqualTo("openid profile")
+    }
+
+    @Test
+    @WithOAuthAuthorizationConsent(scopes = ["openid", "profile"])
+    fun authorizationWithAllScopesAlreadyConsentedSkipsConsentPage(@Autowired page: Page) {
+        page.navigate(authorizationRequest().url)
+        page.fill("input[name=username]", "test-user")
+        page.fill("input[name=password]", "test-user-passowrd")
+        page.click("button[type=submit]")
+
+        assertThat(page.getByText("Consent required")).not().isVisible()
+    }
+
+    @Test
+    @WithOAuthAuthorizationConsent(scopes = ["openid"])
+    fun authorizationWithPartiallyConsentedScopesRequestsOnlyNewScopes(@Autowired page: Page) {
+        page.navigate(authorizationRequest().url)
+        page.fill("input[name=username]", "test-user")
+        page.fill("input[name=password]", "test-user-passowrd")
+        page.click("button[type=submit]")
+
+        assertThat(page.getByText("Consent required")).isVisible()
+        assertThat(page.getByText("profile", Page.GetByTextOptions().setExact(true))).isVisible()
+        assertThat(page.locator("#openid")).isChecked()
+        assertThat(page.locator("#openid")).isDisabled()
+        assertThat(page.locator("#profile")).not().isChecked()
+        page.check("input[name=scope][value=profile]")
+        page.click("button#submit-consent")
+        assertThat(page.url()).contains("127.0.0.1:8080/login/oauth2/code/test")
     }
 
     @Test
@@ -154,8 +179,7 @@ class IdentityApplicationTests {
             .jsonPath("$.issuer").isNotEmpty
             .jsonPath("$.token_endpoint").isEqualTo("http://localhost:$port/oauth2/token")
             .jsonPath("$.grant_types_supported").value<List<String>> {
-                org.assertj.core.api.Assertions.assertThat(it)
-                    .contains("authorization_code", "client_credentials", "refresh_token")
+                assertThat(it).contains("authorization_code", "client_credentials", "refresh_token")
             }
     }
 
@@ -240,7 +264,32 @@ class IdentityApplicationTests {
             .jsonPath("$.active").isEqualTo(false)
     }
 
+    private fun authorizationRequest(scopes: Set<String> = setOf("openid", "profile")): AuthorizationRequest {
+        val codeVerifier = base64Url(ByteArray(32).also(SecureRandom()::nextBytes))
+        val codeChallenge = base64Url(MessageDigest.getInstance("SHA-256").digest(codeVerifier.toByteArray()))
+        val redirectUri = "http://127.0.0.1:8080/login/oauth2/code/test"
+        val url = DefaultUriBuilderFactory("http://localhost:$port")
+            .uriString("/oauth2/authorize")
+            .queryParam("response_type", "code")
+            .queryParam("client_id", "test-client")
+            .queryParam("redirect_uri", redirectUri)
+            .queryParam("scope", scopes.joinToString(" "))
+            .queryParam("state", UUID.randomUUID().toString())
+            .queryParam("nonce", UUID.randomUUID().toString())
+            .queryParam("code_challenge", codeChallenge)
+            .queryParam("code_challenge_method", "S256")
+            .build()
+            .toASCIIString()
+        return AuthorizationRequest(url, codeVerifier, redirectUri)
+    }
+
     private fun base64Url(bytes: ByteArray): String =
         Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+
+    private data class AuthorizationRequest(
+        val url: String,
+        val codeVerifier: String,
+        val redirectUri: String,
+    )
 
 }
