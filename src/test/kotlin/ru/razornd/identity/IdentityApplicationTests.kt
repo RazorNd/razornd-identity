@@ -26,6 +26,8 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDO
 import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.security.oauth2.core.OAuth2AccessToken
+import org.springframework.security.oauth2.core.OAuth2RefreshToken
 import org.springframework.test.context.jdbc.Sql
 import org.springframework.test.web.servlet.client.RestTestClient
 import org.springframework.util.MultiValueMap
@@ -51,6 +53,7 @@ import java.util.*
 )
 @Import(TestcontainersConfiguration::class, PlaywrightConfiguration::class)
 @Sql("classpath:sql/create-test-user.sql")
+@EnableOAuthAuthorizationTestSupport
 class IdentityApplicationTests {
     @LocalServerPort
     var port: Int = 0
@@ -112,6 +115,132 @@ class IdentityApplicationTests {
             .jsonPath("$.scope").isEqualTo("openid profile")
     }
 
+    @Test
+    fun clientCredentialsGrantReturnsAccessToken() {
+        client.post()
+            .uri("/oauth2/token")
+            .headers { it.setBasicAuth("test-client", "test-client-secret") }
+            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+            .body(MultiValueMap.fromSingleValue(mapOf("grant_type" to "client_credentials", "scope" to "profile")))
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody()
+            .jsonPath("$.access_token").isNotEmpty
+            .jsonPath("$.token_type").isEqualTo("Bearer")
+            .jsonPath("$.scope").isEqualTo("profile")
+    }
+
+    @Test
+    fun openIdProviderConfigurationListsEndpoints() {
+        client.get()
+            .uri("/.well-known/openid-configuration")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody()
+            .jsonPath("$.issuer").isNotEmpty
+            .jsonPath("$.authorization_endpoint").isEqualTo("http://localhost:$port/oauth2/authorize")
+            .jsonPath("$.token_endpoint").isEqualTo("http://localhost:$port/oauth2/token")
+            .jsonPath("$.userinfo_endpoint").isEqualTo("http://localhost:$port/userinfo")
+            .jsonPath("$.end_session_endpoint").isEqualTo("http://localhost:$port/connect/logout")
+    }
+
+    @Test
+    fun oauthAuthorizationServerMetadataListsGrantTypes() {
+        client.get()
+            .uri("/.well-known/oauth-authorization-server")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody()
+            .jsonPath("$.issuer").isNotEmpty
+            .jsonPath("$.token_endpoint").isEqualTo("http://localhost:$port/oauth2/token")
+            .jsonPath("$.grant_types_supported").value<List<String>> {
+                org.assertj.core.api.Assertions.assertThat(it)
+                    .contains("authorization_code", "client_credentials", "refresh_token")
+            }
+    }
+
+    @Test
+    fun jsonWebKeySetReturnsSigningKeys() {
+        client.get()
+            .uri("/oauth2/jwks")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody()
+            .jsonPath("$.keys").isNotEmpty
+    }
+
+    @Test
+    fun userInfoRequiresBearerToken() {
+        client.get()
+            .uri("/userinfo")
+            .exchange()
+            .expectStatus().isUnauthorized()
+    }
+
+    @Test
+    @WithOAuthAuthorization(registeredClientId = "test-client")
+    fun refreshTokenGrantReturnsTokens(refreshToken: OAuth2RefreshToken) {
+        client.post()
+            .uri("/oauth2/token")
+            .headers { it.setBasicAuth("test-client", "test-client-secret") }
+            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+            .body(
+                MultiValueMap.fromSingleValue(
+                    mapOf(
+                        "grant_type" to "refresh_token",
+                        "refresh_token" to refreshToken.tokenValue
+                    )
+                )
+            )
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody()
+            .jsonPath("$.access_token").isNotEmpty
+            .jsonPath("$.refresh_token").isNotEmpty
+    }
+
+    @Test
+    @WithOAuthAuthorization(accessTokenValue = "introspection-test-access-token")
+    fun tokenIntrospectionReturnsActiveForStoredAccessToken(accessToken: OAuth2AccessToken) {
+        client.post()
+            .uri("/oauth2/introspect")
+            .headers { it.setBasicAuth("test-client", "test-client-secret") }
+            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+            .body(MultiValueMap.fromSingleValue(mapOf("token" to accessToken.tokenValue)))
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody()
+            .jsonPath("$.active").isEqualTo(true)
+            .jsonPath("$.client_id").isEqualTo("test-client")
+    }
+
+    @Test
+    @WithOAuthAuthorization(accessTokenValue = "revocation-test-access-token")
+    fun tokenRevocationMakesAccessTokenInactive(accessToken: OAuth2AccessToken) {
+        client.post()
+            .uri("/oauth2/revoke")
+            .headers { it.setBasicAuth("test-client", "test-client-secret") }
+            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+            .body(
+                MultiValueMap.fromSingleValue(
+                    mapOf("token" to accessToken.tokenValue, "token_type_hint" to "access_token")
+                )
+            )
+            .exchange()
+            .expectStatus().isOk()
+
+        client.post()
+            .uri("/oauth2/introspect")
+            .headers { it.setBasicAuth("test-client", "test-client-secret") }
+            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+            .body(MultiValueMap.fromSingleValue(mapOf("token" to accessToken.tokenValue)))
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody()
+            .jsonPath("$.active").isEqualTo(false)
+    }
+
     private fun base64Url(bytes: ByteArray): String =
         Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+
 }

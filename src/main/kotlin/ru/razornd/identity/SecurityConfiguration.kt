@@ -25,6 +25,7 @@ import org.springframework.http.MediaType
 import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.invoke
+import org.springframework.security.oauth2.server.authorization.InMemoryOAuth2AuthorizationService
 import org.springframework.security.provisioning.JdbcUserDetailsManager
 import javax.sql.DataSource
 import org.springframework.security.web.SecurityFilterChain
@@ -62,6 +63,9 @@ class SecurityConfiguration {
 
         return http.build()
     }
+
+    @Bean
+    fun inMemoryAuthorizationService() = InMemoryOAuth2AuthorizationService()
 
     @Bean
     @Order(SecurityFilterProperties.BASIC_AUTH_ORDER)
