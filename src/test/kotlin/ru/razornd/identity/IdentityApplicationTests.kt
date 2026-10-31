@@ -50,7 +50,11 @@ import java.util.*
         "spring.security.oauth2.authorizationserver.client.test.registration.authorization-grant-types=authorization_code,refresh_token,client_credentials",
         "spring.security.oauth2.authorizationserver.client.test.registration.redirect-uris=http://127.0.0.1:8080/login/oauth2/code/test",
         "spring.security.oauth2.authorizationserver.client.test.registration.scopes=openid,profile",
-        "spring.security.oauth2.authorizationserver.client.test.require-authorization-consent=true"
+        "spring.security.oauth2.authorizationserver.client.test.require-authorization-consent=true",
+        "razornd.identity.signing-key.location=classpath:test-signing-keys.p12",
+        "razornd.identity.signing-key.store-password=test-store-password",
+        "razornd.identity.signing-key.key-passwords[test-signing-key]=test-store-password",
+        "razornd.identity.signing-key.active-key-id=test-signing-key"
     ]
 )
 @Import(TestcontainersConfiguration::class, PlaywrightConfiguration::class)
@@ -153,6 +157,10 @@ class IdentityApplicationTests {
             .jsonPath("$.access_token").isNotEmpty
             .jsonPath("$.token_type").isEqualTo("Bearer")
             .jsonPath("$.scope").isEqualTo("profile")
+            .jsonPath("$.access_token").value<String> { accessToken ->
+                val header = String(Base64.getUrlDecoder().decode(accessToken.substringBefore('.')))
+                assertThat(header).contains("\"kid\":\"test-signing-key\"")
+            }
     }
 
     @Test
@@ -191,6 +199,10 @@ class IdentityApplicationTests {
             .expectStatus().isOk()
             .expectBody()
             .jsonPath("$.keys").isNotEmpty
+            .jsonPath("$.keys").value<List<Map<String, Any>>> { keys ->
+                assertThat(keys.map { it["kid"] })
+                    .containsExactlyInAnyOrder("test-signing-key", "secondary-signing-key", "tertiary-signing-key")
+            }
     }
 
     @Test

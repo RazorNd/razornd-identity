@@ -7,6 +7,14 @@ spring:
         namespace: razornd:identity:session
     timeout: 30d
 
+razornd:
+  identity:
+    signing-key:
+      location: ${IDENTITY_SIGNING_KEY_LOCATION:}
+      store-password: ${IDENTITY_SIGNING_KEY_STORE_PASSWORD:}
+      key-passwords: {}
+      active-key-id: ${IDENTITY_SIGNING_KEY_ID:}
+
 logging:
   group:
     authentication: org.springframework.security.authentication
