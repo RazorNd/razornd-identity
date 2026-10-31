@@ -26,8 +26,8 @@ import tools.jackson.databind.json.JsonMapper
 @Configuration(proxyBeanMethods = false)
 class SessionConfiguration {
     @Bean
-    fun springSessionDefaultRedisSerializer(): RedisSerializer<Any> {
-        val mapper = JsonMapper.builder()
+    fun springSessionDefaultRedisSerializer(mapperBuilder: JsonMapper.Builder): RedisSerializer<Any> {
+        val mapper = mapperBuilder
             .addModules(SecurityJacksonModules.getModules(javaClass.classLoader))
             .build()
 
