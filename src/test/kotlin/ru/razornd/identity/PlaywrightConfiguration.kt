@@ -19,15 +19,16 @@ package ru.razornd.identity
 import com.microsoft.playwright.Browser
 import com.microsoft.playwright.Page
 import com.microsoft.playwright.Playwright
+import org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_PROTOTYPE
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
-import org.springframework.context.annotation.Lazy
+import org.springframework.context.annotation.Scope
 import org.springframework.core.env.Environment
 import java.nio.file.Files
 
 @TestConfiguration(proxyBeanMethods = false)
-@Import(PlaywrightFailureArtifactListener::class)
+@Import(PlaywrightPageListener::class)
 class PlaywrightConfiguration {
     @Bean(destroyMethod = "close")
     fun playwright(): Playwright = Playwright.create()
@@ -36,8 +37,8 @@ class PlaywrightConfiguration {
     fun browser(playwright: Playwright): Browser = playwright.chromium().launch()
 
     @Bean
-    @Lazy
-    fun page(browser: Browser, environment: Environment): Page {
+    @Scope(SCOPE_PROTOTYPE)
+    fun page(browser: Browser, environment: Environment, pagesHolder: PagesHolder): Page {
         val port = environment.getRequiredProperty("local.server.port")
         val videoDirectory = Files.createTempDirectory("identity-playwright-")
         val context = browser.newContext(
@@ -47,6 +48,23 @@ class PlaywrightConfiguration {
                 .setRecordVideoSize(640, 480)
                 .setViewportSize(640, 480)
         )
-        return context.newPage().apply { setDefaultTimeout(5_000.0) }
+        return context.newPage().apply { setDefaultTimeout(5_000.0) }.also { pagesHolder.addPage(it) }
+    }
+
+    @Bean
+    fun pagesHolder() = PagesHolder()
+
+    class PagesHolder {
+        private val storage = mutableListOf<Page>()
+
+        val pages: List<Page> get() = storage.toList()
+
+        internal fun addPage(page: Page) {
+            storage.add(page)
+        }
+
+        fun closeAllPages() = storage.forEach { it.close() }
+
+        fun clear() = storage.clear()
     }
 }
