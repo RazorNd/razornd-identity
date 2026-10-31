@@ -1,0 +1,116 @@
+{
+  "id": "authorization-id",
+  "registeredClientId": "client-internal-id",
+  "principalName": "debug-user",
+  "authorizationGrantType": "authorization_code",
+  "authorizedScopes": ["openid"],
+  "attributes": {
+    "state": "authorization-state"
+  },
+  "principal": {
+    "@class": "org.springframework.security.authentication.UsernamePasswordAuthenticationToken",
+    "authenticated": true,
+    "authorities": [
+      "java.util.Collections$UnmodifiableRandomAccessList",
+      [
+        {
+          "@class": "org.springframework.security.core.authority.SimpleGrantedAuthority",
+          "authority": "ROLE_USER"
+        }
+      ]
+    ],
+    "credentials": null,
+    "details": null,
+    "principal": "debug-user"
+  },
+  "authorizationRequest": {
+    "authorizationUri": "https://identity.example/oauth2/authorize",
+    "clientId": "debug-client",
+    "redirectUri": "https://client.example/callback",
+    "scopes": ["openid"],
+    "state": "request-state",
+    "additionalParameters": {
+      "nonce": "debug-nonce"
+    },
+    "authorizationRequestUri": "https://identity.example/oauth2/authorize?client_id=debug-client",
+    "attributes": {
+      "registration_id": "test-client"
+    }
+  },
+  "tokens": [
+    {
+      "kind": "ACCESS",
+      "value": "access-token",
+      "issuedAt": "2026-01-02T03:04:05Z",
+      "expiresAt": "2026-01-02T03:14:05Z",
+      "tokenType": "Bearer",
+      "scopes": ["openid"],
+      "claims": {},
+      "metadata": {
+        "metadata.token.invalidated": false
+      }
+    },
+    {
+      "kind": "REFRESH",
+      "value": "refresh-token",
+      "issuedAt": "2026-01-02T03:04:05Z",
+      "expiresAt": "2026-01-02T04:04:05Z",
+      "tokenType": null,
+      "scopes": [],
+      "claims": {},
+      "metadata": {
+        "metadata.token.invalidated": false
+      }
+    },
+    {
+      "kind": "AUTHORIZATION_CODE",
+      "value": "authorization-code",
+      "issuedAt": "2026-01-02T03:04:05Z",
+      "expiresAt": "2026-01-02T03:06:05Z",
+      "tokenType": null,
+      "scopes": [],
+      "claims": {},
+      "metadata": {
+        "metadata.token.invalidated": false
+      }
+    },
+    {
+      "kind": "ID",
+      "value": "id-token",
+      "issuedAt": null,
+      "expiresAt": null,
+      "tokenType": null,
+      "scopes": [],
+      "claims": {
+        "sub": "debug-user"
+      },
+      "metadata": {
+        "metadata.token.invalidated": false
+      }
+    },
+    {
+      "kind": "DEVICE_CODE",
+      "value": "device-code",
+      "issuedAt": "2026-01-02T03:04:05Z",
+      "expiresAt": "2026-01-02T03:14:05Z",
+      "tokenType": null,
+      "scopes": [],
+      "claims": {},
+      "metadata": {
+        "metadata.token.invalidated": false
+      }
+    },
+    {
+      "kind": "USER_CODE",
+      "value": "user-code",
+      "issuedAt": "2026-01-02T03:04:05Z",
+      "expiresAt": "2026-01-02T03:14:05Z",
+      "tokenType": null,
+      "scopes": [],
+      "claims": {},
+      "metadata": {
+        "metadata.token.invalidated": false
+      }
+    }
+  ]
+}
