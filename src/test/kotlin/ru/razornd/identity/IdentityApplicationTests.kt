@@ -33,8 +33,7 @@ import org.springframework.test.context.jdbc.Sql
 import org.springframework.test.web.servlet.client.RestTestClient
 import org.springframework.util.MultiValueMap
 import org.springframework.web.util.DefaultUriBuilderFactory
-import java.net.URI
-import java.net.URLDecoder
+import org.springframework.web.util.UriComponentsBuilder
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.*
@@ -48,7 +47,7 @@ import java.util.*
         "spring.security.oauth2.authorizationserver.client.test.registration.client-name=test-client",
         "spring.security.oauth2.authorizationserver.client.test.registration.client-authentication-methods=client_secret_basic,client_secret_post",
         "spring.security.oauth2.authorizationserver.client.test.registration.authorization-grant-types=authorization_code,refresh_token,client_credentials",
-        "spring.security.oauth2.authorizationserver.client.test.registration.redirect-uris=http://127.0.0.1:8080/login/oauth2/code/test",
+        "spring.security.oauth2.authorizationserver.client.test.registration.redirect-uris=/",
         "spring.security.oauth2.authorizationserver.client.test.registration.scopes=openid,profile",
         "spring.security.oauth2.authorizationserver.client.test.require-authorization-consent=true",
         "razornd.identity.signing-key.location=classpath:test-signing-keys.p12",
@@ -70,27 +69,20 @@ class IdentityApplicationTests {
     fun authorizationCodeFlowReturnsTokens(@Autowired page: Page) {
         val authorizationRequest = authorizationRequest()
 
-        var callbackUrl: String? = null
-        page.onResponse { response ->
-            response.headers()["location"]
-                ?.takeIf { it.startsWith("http://127.0.0.1:8080/login/oauth2/code/test") }
-                ?.let { callbackUrl = it }
-        }
         page.navigate(authorizationRequest.url)
         page.fill("input[name=username]", "test-user")
         page.fill("input[name=password]", "test-user-passowrd")
         page.click("button[type=submit]")
 
         assertThat(page.getByText("Consent required")).isVisible()
-        page.check("input[name=scope]")
+        page.check("input[name=scope][value=profile]")
         page.click("button#submit-consent")
 
-        val callback = URI(callbackUrl ?: page.url())
-        val code = callback.query.split('&')
-            .firstOrNull { it.startsWith("code=") }
-            ?.substringAfter("code=")
-            ?.let { URLDecoder.decode(it, Charsets.UTF_8) }
-            ?: error("Authorization code missing from redirect: ${page.url()}")
+        val uriComponents = UriComponentsBuilder.fromUriString(page.url()).build()
+
+        val code = requireNotNull(uriComponents.queryParams["code"]?.first()) {
+            "Authorization code missing from redirect: ${page.url()}"
+        }
 
         client.post()
             .uri("/oauth2/token")
@@ -141,7 +133,7 @@ class IdentityApplicationTests {
         assertThat(page.locator("#profile")).not().isChecked()
         page.check("input[name=scope][value=profile]")
         page.click("button#submit-consent")
-        assertThat(page.url()).contains("127.0.0.1:8080/login/oauth2/code/test")
+        assertThat(page.url()).contains("code=")
     }
 
     @Test
@@ -279,7 +271,7 @@ class IdentityApplicationTests {
     private fun authorizationRequest(scopes: Set<String> = setOf("openid", "profile")): AuthorizationRequest {
         val codeVerifier = base64Url(ByteArray(32).also(SecureRandom()::nextBytes))
         val codeChallenge = base64Url(MessageDigest.getInstance("SHA-256").digest(codeVerifier.toByteArray()))
-        val redirectUri = "http://127.0.0.1:8080/login/oauth2/code/test"
+        val redirectUri = "/"
         val url = DefaultUriBuilderFactory("http://localhost:$port")
             .uriString("/oauth2/authorize")
             .queryParam("response_type", "code")

@@ -16,13 +16,14 @@
 
 package ru.razornd.identity
 
+import org.springframework.boot.security.autoconfigure.web.StaticResourceLocation.*
+import org.springframework.boot.security.autoconfigure.web.servlet.PathRequest
 import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
 import org.springframework.http.MediaType
-import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.invoke
 import org.springframework.security.provisioning.JdbcUserDetailsManager
@@ -42,7 +43,10 @@ class SecurityConfiguration {
     fun authorizationServerSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http.oauth2AuthorizationServer { authorizationServer ->
             http.securityMatcher(authorizationServer.endpointsMatcher)
-            authorizationServer.oidc(Customizer.withDefaults())
+            authorizationServer.oidc { }
+            authorizationServer.authorizationEndpoint { endpoint ->
+                endpoint.consentPage("/oauth2/consent")
+            }
         }
 
         http {
@@ -68,9 +72,20 @@ class SecurityConfiguration {
     fun applicationSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http {
             authorizeHttpRequests {
+                authorize("/error", permitAll)
+                authorize(PathRequest.toStaticResources().at(CSS, IMAGES, JAVA_SCRIPT), permitAll)
                 authorize(anyRequest, authenticated)
             }
-            formLogin { }
+            cors { }
+            csrf { }
+            formLogin {
+                loginPage = "/login"
+                permitAll()
+            }
+            logout {
+                logoutUrl = "/logout"
+            }
+            passwordManagement { }
         }
 
         return http.build()

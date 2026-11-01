@@ -1,0 +1,874 @@
+/*
+ * Copyright 2026 Daniil <RazorNd> Razorenov
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;600;650;700&display=swap');
+
+:root {
+    --ink: #17211f;
+    --mint: #6de0bb;
+    --bg: #f4f5f2;
+    --muted: #7b8189;
+    --line: #dce0df;
+    --white: #fff;
+    --error: #b14343;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    font-synthesis: none
+}
+
+* {
+    box-sizing: border-box
+}
+
+body {
+    margin: 0
+}
+
+button, input {
+    font: inherit
+}
+
+button, a, input {
+    -webkit-tap-highlight-color: transparent
+}
+
+a {
+    color: inherit;
+    text-underline-offset: 4px
+}
+
+button, a {
+    touch-action: manipulation
+}
+
+button {
+    cursor: pointer
+}
+
+button:disabled {
+    cursor: wait;
+    opacity: .7
+}
+
+a:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 3px solid #35ac85;
+    outline-offset: 4px
+}
+
+h1, h2, p {
+    margin: 0
+}
+
+h1 {
+    font-size: 36px;
+    letter-spacing: -1.35px;
+    line-height: 1.2;
+    font-weight: 650
+}
+
+p {
+    line-height: 1.65
+}
+
+.logo {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none
+}
+
+.logo img {
+    width: 236px;
+    height: auto;
+    display: block
+}
+
+.shell {
+    min-height: 100svh;
+    padding: 36px 48px 116px
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px
+}
+
+.header-links {
+    display: flex;
+    gap: 32px;
+    color: #737b80;
+    font-size: 14px
+}
+
+.header-links a {
+    text-decoration: none
+}
+
+.header-links a:hover {
+    color: var(--ink)
+}
+
+.stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100svh - 210px);
+    padding: 52px 0
+}
+
+.content {
+    width: 100%;
+    max-width: 440px
+}
+
+.subtitle {
+    color: var(--muted);
+    font-size: 16px;
+    margin-top: 14px
+}
+
+.form {
+    margin-top: 38px
+}
+
+.field {
+    margin-bottom: 23px
+}
+
+.field label {
+    display: block;
+    font-size: 14px;
+    font-weight: 550;
+    margin-bottom: 10px
+}
+
+.input-wrap {
+    position: relative
+}
+
+.input-wrap input {
+    width: 100%;
+    height: 54px;
+    background: #fff9;
+    border: 1px solid #ced5d3;
+    border-radius: 8px;
+    padding: 0 48px 0 16px;
+    color: var(--ink);
+    transition: border-color .15s, box-shadow .15s
+}
+
+.input-wrap input:focus {
+    outline: none;
+    border-color: #429c7e;
+    box-shadow: 0 0 0 3px #6de0bb30
+}
+
+.input-wrap input[aria-invalid=true] {
+    border-color: var(--error)
+}
+
+.eye {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 0;
+    background: none;
+    color: #768079;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 6px
+}
+
+.eye:hover {
+    background: #edf2ef
+}
+
+.eye svg {
+    width: 21px;
+    height: 21px
+}
+
+.primary, .secondary {
+    min-height: 52px;
+    padding: 14px 22px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    font-weight: 550;
+    font-size: 15px;
+    text-decoration: none;
+    transition: background .15s, transform .15s
+}
+
+.primary {
+    background: var(--ink);
+    color: #fff;
+    border: 1px solid var(--ink)
+}
+
+.primary:hover {
+    background: #293c35
+}
+
+.primary:active, .secondary:active {
+    transform: translateY(1px)
+}
+
+.primary .arrow {
+    margin-left: auto;
+    font-size: 23px;
+    font-weight: 400;
+    line-height: 1
+}
+
+.secondary {
+    background: transparent;
+    border: 1px solid #cdd4d0;
+    color: var(--ink)
+}
+
+.secondary:hover {
+    background: #edf1ee
+}
+
+.full {
+    width: 100%
+}
+
+.text-link {
+    font-size: 14px;
+    color: #7b8288
+}
+
+.logout-form {
+    margin: 0;
+}
+
+.logout-form .text-link {
+    padding: 0;
+    border: 0;
+    background: none;
+}
+
+.form-foot {
+    text-align: center;
+    margin-top: 23px
+}
+
+.notice {
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 12px 14px;
+    border-radius: 7px;
+    margin: 0 0 20px;
+    background: #f9eaea;
+    color: #913c3c
+}
+
+.notice:empty {
+    display: none
+}
+
+.notice.success {
+    background: #e2f4eb;
+    color: #245c47
+}
+
+.fine {
+    font-size: 12px;
+    color: #9a9fa2;
+    line-height: 1.6
+}
+
+.preview-nav {
+    position: fixed;
+    z-index: 10;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    padding: 6px 7px;
+    background: #fffefb;
+    border: 1px solid #e1e5df;
+    border-radius: 12px;
+    box-shadow: 0 8px 28px #17211f0b;
+    white-space: nowrap
+}
+
+.preview-nav a {
+    text-decoration: none;
+    font-size: 12px;
+    padding: 10px 13px;
+    border-radius: 7px;
+    color: #7a817d;
+    transition: background .15s
+}
+
+.preview-nav a:hover {
+    background: #eef3ef;
+    color: var(--ink)
+}
+
+.preview-nav a.active {
+    background: var(--ink);
+    color: white
+}
+
+.preview-label {
+    font-size: 10px;
+    color: #858d85;
+    padding: 0 13px 0 8px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    border-right: 1px solid var(--line);
+    margin-right: 4px
+}
+
+.preview-label i {
+    width: 5px;
+    height: 5px;
+    background: #4cb68f;
+    border-radius: 50%
+}
+
+.login {
+    display: grid;
+    grid-template-columns:46% 54%;
+    min-height: 100svh
+}
+
+.brand-panel {
+    background: var(--ink);
+    color: #fff;
+    padding: 48px 52px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column
+}
+
+.brand-panel .logo {
+    position: relative;
+    z-index: 1
+}
+
+.brand-copy {
+    margin-top: 110px;
+    position: relative;
+    z-index: 1
+}
+
+.brand-copy h2 {
+    font-size: clamp(38px, 4.2vw, 64px);
+    font-weight: 600;
+    line-height: 1.16;
+    letter-spacing: -2px
+}
+
+.brand-copy p {
+    color: #b1b9b6;
+    margin-top: 27px;
+    font-size: 17px;
+    max-width: 380px
+}
+
+.door-art {
+    width: 100%;
+    height: 51%;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    opacity: .9
+}
+
+.login-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 100px 60px 150px;
+    position: relative
+}
+
+.login-panel .content {
+    max-width: 410px
+}
+
+.login-symbol {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 28px
+}
+
+.login-panel h1 {
+    text-align: center;
+    font-size: 34px
+}
+
+.login-panel .form {
+    margin-top: 42px
+}
+
+.login-foot {
+    position: absolute;
+    bottom: 110px;
+    text-align: center;
+    left: 20px;
+    right: 20px
+}
+
+.status {
+    text-align: center;
+    max-width: 620px
+}
+
+.status h1 {
+    font-size: 38px
+}
+
+.status-icon {
+    width: 76px;
+    height: 76px;
+    margin: 0 auto 30px;
+    display: grid;
+    place-items: center;
+    border: 1.5px solid var(--mint);
+    border-radius: 50%
+}
+
+.status-icon svg {
+    width: 36px;
+    height: 36px
+}
+
+.status .identity-line {
+    font-size: 19px;
+    margin-top: 23px
+}
+
+.status .close-line {
+    font-size: 17px;
+    color: var(--muted);
+    margin-top: 8px
+}
+
+.status .actions {
+    max-width: 360px;
+    margin: 46px auto 0
+}
+
+.status .text-link {
+    display: inline-block;
+    margin-top: 25px
+}
+
+.status .logout-form {
+    margin-top: 25px;
+}
+
+.status .logout-form .text-link {
+    margin-top: 0;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+.account .eyebrow {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 16px
+}
+
+.account .form {
+    margin-top: 34px
+}
+
+.card {
+    max-width: 540px;
+    width: 100%;
+    border: 1px solid #e0e5df;
+    background: #fff;
+    border-radius: 14px;
+    padding: 35px 38px
+}
+
+.card .card-symbol {
+    height: 55px;
+    width: 55px;
+    display: block;
+    margin: 0 auto 23px
+}
+
+.card h1 {
+    text-align: center;
+    font-size: 30px;
+    letter-spacing: -1px
+}
+
+.card .subtitle {
+    text-align: center;
+    font-size: 15px;
+    line-height: 1.7
+}
+
+.account-tag {
+    padding: 13px 16px;
+    background: #f2f4f1;
+    border-radius: 7px;
+    font-size: 13px;
+    margin: 26px 0 28px;
+    color: #7a817d
+}
+
+.account-tag strong {
+    margin-left: 9px;
+    color: var(--ink);
+    font-weight: 600
+}
+
+.permission-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 13px
+}
+
+.permission {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 14px;
+    border: 1px solid #e4e8e2;
+    border-radius: 8px;
+    margin-top: 10px
+}
+
+.permission-icon {
+    background: #f3f5f1;
+    border-radius: 7px;
+    flex: 0 0 36px;
+    height: 40px;
+    display: grid;
+    place-items: center
+}
+
+.permission-icon svg {
+    width: 22px;
+    height: 22px
+}
+
+.permission h2 {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4
+}
+
+.permission p {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 5px;
+    line-height: 1.6
+}
+
+.consent-note {
+    border-top: 1px solid #e5e9e3;
+    margin-top: 25px;
+    padding-top: 18px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6
+}
+
+.button-row {
+    display: grid;
+    grid-template-columns:1fr 1fr;
+    gap: 12px;
+    margin-top: 22px
+}
+
+.error-block {
+    max-width: 650px;
+    text-align: center
+}
+
+.error-icon {
+    width: 78px;
+    height: 78px;
+    margin: 0 auto 25px;
+    border-radius: 16px;
+    background: #e1f3ec;
+    display: grid;
+    place-items: center
+}
+
+.error-icon svg {
+    width: 35px;
+    height: 35px
+}
+
+.error-code {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    margin-bottom: 18px
+}
+
+.error-block h1 {
+    font-size: 35px
+}
+
+.error-block .subtitle {
+    font-size: 16px;
+    max-width: 540px;
+    margin: 20px auto 0
+}
+
+.error-block .primary {
+    width: 320px;
+    max-width: 100%;
+    margin-top: 32px
+}
+
+.error-help {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 26px
+}
+
+.error-options {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 30px
+}
+
+.error-options a {
+    text-decoration: none;
+    padding: 6px 10px;
+    border-radius: 5px;
+    font-size: 11px;
+    color: #8e9590
+}
+
+.error-options a.selected {
+    background: #e5ebe4;
+    color: var(--ink)
+}
+
+@media (min-width: 1700px) {
+    .brand-copy {
+        margin-top: 160px
+    }
+
+    .brand-panel {
+        padding: 56px 70px
+    }
+}
+
+@media (max-width: 960px) {
+    .brand-panel {
+        padding: 36px
+    }
+
+    .brand-copy {
+        margin-top: 105px
+    }
+
+    .brand-copy h2 {
+        font-size: 42px
+    }
+
+    .brand-copy p {
+        font-size: 15px
+    }
+
+    .login-panel {
+        padding-left: 36px;
+        padding-right: 36px
+    }
+
+    .logo img {
+        width: 210px
+    }
+
+    .shell {
+        padding: 28px 30px 110px
+    }
+}
+
+@media (max-width: 700px) {
+    h1 {
+        font-size: 29px
+    }
+
+    .shell {
+        padding: 24px 22px 112px
+    }
+
+    .header .logo img {
+        width: 186px
+    }
+
+    .header-links {
+        gap: 18px;
+        font-size: 12px
+    }
+
+    .stage {
+        padding: 44px 0;
+        min-height: calc(100svh - 200px)
+    }
+
+    .login {
+        display: block
+    }
+
+    .brand-panel {
+        min-height: 0;
+        padding: 25px 25px 29px
+    }
+
+    .brand-panel .logo img {
+        width: 195px
+    }
+
+    .brand-copy {
+        margin-top: 29px
+    }
+
+    .brand-copy h2 {
+        font-size: 29px;
+        letter-spacing: -1px
+    }
+
+    .brand-copy h2 br {
+        display: none
+    }
+
+    .brand-copy p {
+        font-size: 13px;
+        margin-top: 12px
+    }
+
+    .door-art {
+        display: none
+    }
+
+    .login-panel {
+        padding: 38px 25px 140px
+    }
+
+    .login-symbol {
+        display: none
+    }
+
+    .login-panel h1 {
+        text-align: left;
+        font-size: 29px
+    }
+
+    .login-panel .form {
+        margin-top: 29px
+    }
+
+    .login-foot {
+        bottom: 96px
+    }
+
+    .preview-nav {
+        bottom: 14px;
+        max-width: calc(100% - 20px);
+        gap: 1px;
+        padding: 5px
+    }
+
+    .preview-nav a {
+        padding: 10px 11px;
+        font-size: 11px
+    }
+
+    .preview-label {
+        display: none
+    }
+
+    .card {
+        padding: 27px 22px;
+        border-radius: 11px
+    }
+
+    .card h1 {
+        font-size: 26px
+    }
+
+    .card .subtitle {
+        font-size: 14px
+    }
+
+    .status h1 {
+        font-size: 29px
+    }
+
+    .status .identity-line {
+        font-size: 17px
+    }
+
+    .status .close-line {
+        font-size: 15px
+    }
+
+    .status .actions {
+        margin-top: 32px
+    }
+
+    .status-icon {
+        width: 64px;
+        height: 64px;
+        margin-bottom: 25px
+    }
+
+    .error-block h1 {
+        font-size: 29px
+    }
+
+    .error-block .subtitle {
+        font-size: 14px
+    }
+
+    .account .eyebrow {
+        margin-top: 10px
+    }
+
+    .account .form {
+        margin-top: 29px
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+        scroll-behavior: auto !important
+    }
+}
