@@ -35,8 +35,9 @@ import javax.sql.DataSource
 @Configuration
 class SecurityConfiguration {
     @Bean
-    fun userDetailsManager(dataSource: DataSource): JdbcUserDetailsManager =
-        JdbcUserDetailsManager(dataSource)
+    fun userDetailsManager(dataSource: DataSource) = JdbcUserDetailsManager(dataSource).apply {
+        setEnableUpdatePassword(true)
+    }
 
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
