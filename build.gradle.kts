@@ -71,3 +71,14 @@ tasks.withType<Test> {
     useJUnitPlatform()
     jvmArgs("-javaagent:${mockitoAgent.asPath}")
 }
+
+tasks.bootBuildImage {
+    if (project.hasProperty("additionalTags")) {
+        tags = imageName.map {
+            listOfNotNull(
+                "$version".lowercase(),
+                "latest".takeIf { "$version".endsWith("-SNAPSHOT").not() }
+            ).map { tag -> "${it.substringBefore(":")}:$tag" }
+        }
+    }
+}
