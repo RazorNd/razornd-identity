@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ru.razornd.identity
+package ru.razornd.identity.account
 
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.*

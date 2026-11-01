@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ru.razornd.identity
+package ru.razornd.identity.oauth
 
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsent
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsentService

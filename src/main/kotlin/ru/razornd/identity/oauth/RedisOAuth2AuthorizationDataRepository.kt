@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ru.razornd.identity
+package ru.razornd.identity.oauth
 
 import org.springframework.data.redis.core.RedisOperations
 import org.springframework.data.redis.core.StringRedisTemplate

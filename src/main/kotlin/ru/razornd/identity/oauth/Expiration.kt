@@ -14,17 +14,16 @@
  * limitations under the License.
  */
 
-package ru.razornd.identity
+package ru.razornd.identity.oauth
 
-import jakarta.validation.constraints.NotBlank
-import jakarta.validation.constraints.Size
+import java.time.Duration
+import java.time.Instant
 
-data class ChangePasswordForm(
-    @field:NotBlank(message = "Enter your current password.")
-    val oldPassword: String = "",
-    @field:NotBlank(message = "Enter a new password.")
-    @field:Size(min = 8, message = "The new password must be at least 8 characters long.")
-    val newPassword: String = "",
-    @field:NotBlank(message = "Confirm your new password.")
-    val repeatPassword: String = "",
-)
+/** Describes when a Redis entry expires. */
+sealed interface Expiration {
+    /** Expires at an absolute instant. */
+    data class At(val expiredAt: Instant) : Expiration
+
+    /** Expires after the given duration from the time it is written. */
+    data class After(val expiredDuration: Duration) : Expiration
+}

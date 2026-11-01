@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ru.razornd.identity
+package ru.razornd.identity.oauth
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach

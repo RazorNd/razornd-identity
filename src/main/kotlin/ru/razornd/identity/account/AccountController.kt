@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ru.razornd.identity
+package ru.razornd.identity.account
 
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus

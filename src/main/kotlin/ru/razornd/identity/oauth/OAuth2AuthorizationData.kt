@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ru.razornd.identity
+package ru.razornd.identity.oauth
 
 import org.springframework.security.core.Authentication
 import org.springframework.security.jackson.SecurityJacksonModules
@@ -25,7 +25,7 @@ import org.springframework.security.oauth2.server.authorization.OAuth2Authorizat
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationCode
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository
 import org.springframework.stereotype.Component
-import ru.razornd.identity.AuthorizationTokenData.Kind
+import ru.razornd.identity.oauth.AuthorizationTokenData.Kind
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.json.JsonMapper
 import java.security.Principal
