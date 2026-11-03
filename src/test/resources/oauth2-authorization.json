@@ -47,7 +47,11 @@
       "scopes": ["openid"],
       "claims": {},
       "metadata": {
-        "metadata.token.invalidated": false
+        "metadata.token.invalidated": false,
+        "metadata.token.claims" : {
+          "@class" : "java.util.LinkedHashMap",
+          "nbf" : [ "java.time.Instant", "2026-01-02T03:04:05Z" ]
+        }
       }
     },
     {

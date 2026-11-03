@@ -24,6 +24,7 @@ import org.springframework.boot.test.autoconfigure.json.JsonTest
 import org.springframework.boot.test.json.BasicJsonTester
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.jackson.CoreJacksonModule
 import org.springframework.security.oauth2.core.AuthorizationGrantType
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod
 import org.springframework.security.oauth2.core.OAuth2AccessToken
@@ -37,7 +38,12 @@ import org.springframework.security.oauth2.server.authorization.OAuth2Authorizat
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository
 import org.springframework.security.oauth2.server.authorization.settings.TokenSettings
+import tools.jackson.databind.DefaultTyping
 import tools.jackson.databind.json.JsonMapper
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import org.springframework.core.io.ClassPathResource
+import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator
+import tools.jackson.module.kotlin.readValue
 import java.security.Principal
 import java.time.Instant
 
@@ -49,12 +55,20 @@ class OAuth2AuthorizationJsonTests {
     @Autowired
     private lateinit var mapperBuilder: JsonMapper.Builder
 
-    private lateinit var mapper: JsonMapper
+    private lateinit var metadataMapper: JsonMapper
     private lateinit var authorizationDataMapper: OAuth2AuthorizationDataMapper
 
     @BeforeEach
     fun setUp() {
-        mapper = mapperBuilder.build()
+        val typeValidator = BasicPolymorphicTypeValidator.builder().also {
+            CoreJacksonModule().configurePolymorphicTypeValidator(it)
+            it.allowIfSubType("kotlin.collections.EmptyMap")
+            it.allowIfSubType("kotlin.collections.EmptySet")
+            it.allowIfSubType("kotlin.collections.EmptyList")
+        }.build()
+        metadataMapper = mapperBuilder
+            .activateDefaultTyping(typeValidator, DefaultTyping.JAVA_LANG_OBJECT, JsonTypeInfo.As.PROPERTY)
+            .build()
         val client = registeredClient()
         val clients = object : RegisteredClientRepository {
             override fun save(registeredClient: RegisteredClient) = Unit
@@ -67,17 +81,16 @@ class OAuth2AuthorizationJsonTests {
     @Test
     fun `authorization data serialization matches JSON contract`() {
         val data = authorizationDataMapper.toData(authorization())
-        val actual = mapper.writeValueAsBytes(data)
+        val actual = metadataMapper.writeValueAsBytes(data)
         val expected = json.from("/oauth2-authorization.json", javaClass)
 
         assertThat(json.from(actual)).isEqualToJson(expected.json)
     }
 
     @Test
-    fun `authorization JSON contract can be deserialized`() {
-        val data = mapper.readValue(
-            javaClass.getResourceAsStream("/oauth2-authorization.json")!!.readBytes(),
-            OAuth2AuthorizationData::class.java,
+    fun `authorization metadata retains polymorphic types when deserialized`() {
+        val data = metadataMapper.readValue<OAuth2AuthorizationData>(
+            ClassPathResource("/oauth2-authorization.json").inputStream
         )
 
         val restored = authorizationDataMapper.toAuthorization(data)
@@ -114,7 +127,11 @@ class OAuth2AuthorizationJsonTests {
             .principalName("debug-user")
             .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
             .authorizedScopes(setOf("openid"))
-            .accessToken(accessToken)
+            .token(accessToken) { metadata ->
+                metadata[OAuth2Authorization.Token.CLAIMS_METADATA_NAME] = mapOf(
+                    "nbf" to issuedAt,
+                ).toMutableMap()
+            }
             .refreshToken(refreshToken)
             .token(authorizationCode)
             .token(idToken)

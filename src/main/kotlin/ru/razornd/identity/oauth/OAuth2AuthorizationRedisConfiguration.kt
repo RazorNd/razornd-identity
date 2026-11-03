@@ -16,6 +16,7 @@
 
 package ru.razornd.identity.oauth
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.redis.connection.RedisConnectionFactory
@@ -24,8 +25,11 @@ import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializ
 import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer
 import org.springframework.data.redis.serializer.StringRedisSerializer
 import org.springframework.security.core.GrantedAuthority
+import org.springframework.security.jackson.CoreJacksonModule
 import org.springframework.security.jackson.SecurityJacksonModules
+import tools.jackson.databind.DefaultTyping
 import tools.jackson.databind.json.JsonMapper
+import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator
 
 /** Configures Redis serialization for OAuth 2.0 authorization snapshots. */
 @Configuration(proxyBeanMethods = false)
@@ -35,8 +39,21 @@ class OAuth2AuthorizationRedisConfiguration {
     @Bean
     fun oauth2AuthorizationRedisTemplate(
         connectionFactory: RedisConnectionFactory,
-        mapper: JsonMapper,
+        mapperBuilder: JsonMapper.Builder,
     ): RedisTemplate<String, OAuth2AuthorizationData> {
+
+        val typeValidator = BasicPolymorphicTypeValidator.builder().also {
+            CoreJacksonModule().configurePolymorphicTypeValidator(it)
+            it.allowIfSubType("kotlin.collections.EmptyMap")
+            it.allowIfSubType("kotlin.collections.EmptySet")
+            it.allowIfSubType("kotlin.collections.EmptyList")
+        }.build()
+
+        val mapper = mapperBuilder
+            .activateDefaultTyping(typeValidator, DefaultTyping.JAVA_LANG_OBJECT, JsonTypeInfo.As.PROPERTY)
+            .build()
+
+
         val authorizationSerializer = JacksonJsonRedisSerializer(mapper, OAuth2AuthorizationData::class.java)
 
         return RedisTemplate<String, OAuth2AuthorizationData>().apply {
