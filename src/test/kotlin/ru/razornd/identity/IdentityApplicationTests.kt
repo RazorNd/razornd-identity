@@ -198,11 +198,20 @@ class IdentityApplicationTests {
     }
 
     @Test
-    fun userInfoRequiresBearerToken() {
+    @WithOAuthAuthorization(registeredClientId = "test-client", createAccessToken = true)
+    fun userInfoRequiresBearerToken(accessToken: OAuth2AccessToken) {
         client.get()
             .uri("/userinfo")
             .exchange()
             .expectStatus().isUnauthorized()
+
+        client.get()
+            .uri("/userinfo")
+            .headers { it.setBearerAuth(accessToken.tokenValue) }
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody()
+            .jsonPath("$.sub").isNotEmpty
     }
 
     @Test

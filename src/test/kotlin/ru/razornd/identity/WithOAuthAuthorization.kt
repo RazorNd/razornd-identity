@@ -27,6 +27,11 @@ import org.springframework.security.oauth2.core.OAuth2AccessToken
 import org.springframework.security.oauth2.core.OAuth2RefreshToken
 import org.springframework.security.oauth2.core.OAuth2Token
 import org.springframework.security.oauth2.core.oidc.OidcIdToken
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm
+import org.springframework.security.oauth2.jwt.JwtClaimsSet
+import org.springframework.security.oauth2.jwt.JwtEncoder
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters
+import org.springframework.security.oauth2.jwt.JwsHeader
 import org.springframework.security.oauth2.server.authorization.OAuth2Authorization
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository
@@ -47,6 +52,7 @@ annotation class WithOAuthAuthorization(
     val authorizationGrantType: String = "authorization_code",
     val authorizedScopes: Array<String> = ["openid", "profile"],
     val accessTokenValue: String = "test-access-token",
+    val createAccessToken: Boolean = false,
     val refreshTokenValue: String = "test-refresh-token",
     val idTokenValue: String = "test-id-token",
     val idTokenSubject: String = "user",
@@ -94,13 +100,19 @@ class WithOAuthAuthorizationParameterResolver : ParameterResolver {
         val registeredClient = registeredClient(annotation, extensionContext)
         val now = Instant.now()
 
+        val (accessToken, accessTokenClaims) = createAccessToken(annotation, now, extensionContext)
+
         return OAuth2Authorization.withRegisteredClient(registeredClient)
             .id(annotation.authorizationId.ifBlank { UUID.randomUUID().toString() })
             .principalName(annotation.principalName)
             .authorizationGrantType(AuthorizationGrantType(annotation.authorizationGrantType))
             .authorizedScopes(annotation.authorizedScopes.toSet())
             .attribute(Principal::class.java.name, createPrincipal(annotation))
-            .accessToken(createAccessToken(annotation, now))
+            .token(accessToken) { metadata ->
+                if (accessTokenClaims.isNotEmpty()) {
+                    metadata[OAuth2Authorization.Token.CLAIMS_METADATA_NAME] = accessTokenClaims
+                }
+            }
             .refreshToken(createRefreshToken(annotation, now))
             .token(createIdToken(annotation))
             .build()
@@ -117,12 +129,40 @@ class WithOAuthAuthorizationParameterResolver : ParameterResolver {
         "Registered OAuth2 client '${annotation.registeredClientId}' is not configured"
     }
 
-    private fun createAccessToken(annotation: WithOAuthAuthorization, issuedAt: Instant) = OAuth2AccessToken(
-        OAuth2AccessToken.TokenType.BEARER,
-        annotation.accessTokenValue,
-        issuedAt,
-        issuedAt.plus(Duration.ofSeconds(annotation.accessTokenTtlSeconds))
-    )
+    private fun createAccessToken(
+        annotation: WithOAuthAuthorization,
+        issuedAt: Instant,
+        extensionContext: ExtensionContext,
+    ): Pair<OAuth2AccessToken, Map<String, Any>> {
+        val expiresAt = issuedAt.plus(Duration.ofSeconds(annotation.accessTokenTtlSeconds))
+        val claims = if (annotation.createAccessToken) {
+            JwtClaimsSet.builder()
+                .subject(annotation.principalName)
+                .issuedAt(issuedAt)
+                .notBefore(issuedAt)
+                .expiresAt(expiresAt)
+                .id(UUID.randomUUID().toString())
+                .claim("scope", annotation.authorizedScopes.joinToString(" "))
+                .claim("aud", listOf(annotation.registeredClientId))
+                .build()
+        } else {
+            null
+        }
+        val tokenValue = claims?.let {
+            val jwtEncoder = SpringExtension.getApplicationContext(extensionContext).getBean<JwtEncoder>()
+            jwtEncoder.encode(
+                JwtEncoderParameters.from(JwsHeader.with(SignatureAlgorithm.RS256).build(), it)
+            ).tokenValue
+        } ?: annotation.accessTokenValue
+
+        return OAuth2AccessToken(
+            OAuth2AccessToken.TokenType.BEARER,
+            tokenValue,
+            issuedAt,
+            expiresAt,
+            annotation.authorizedScopes.toSet(),
+        ) to claims?.claims.orEmpty()
+    }
 
     private fun createRefreshToken(annotation: WithOAuthAuthorization, issuedAt: Instant) = OAuth2RefreshToken(
         annotation.refreshTokenValue,
