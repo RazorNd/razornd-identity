@@ -47,6 +47,8 @@ class OAuth2AuthorizationRedisConfiguration {
             it.allowIfSubType("kotlin.collections.EmptyMap")
             it.allowIfSubType("kotlin.collections.EmptySet")
             it.allowIfSubType("kotlin.collections.EmptyList")
+            it.allowIfSubType("java.net.URL")
+            it.allowIfSubType("java.net.URI")
         }.build()
 
         val mapper = mapperBuilder

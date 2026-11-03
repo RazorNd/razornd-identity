@@ -37,6 +37,7 @@ import org.springframework.security.oauth2.server.authorization.OAuth2Authorizat
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import java.security.Principal
+import java.net.URI
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -142,6 +143,8 @@ class WithOAuthAuthorizationParameterResolver : ParameterResolver {
                 .notBefore(issuedAt)
                 .expiresAt(expiresAt)
                 .id(UUID.randomUUID().toString())
+                .claim("auth_time", Date.from(issuedAt))
+                .claim("iss", URI("https://identity.example").toURL())
                 .claim("scope", annotation.authorizedScopes.joinToString(" "))
                 .claim("aud", listOf(annotation.registeredClientId))
                 .build()

@@ -44,8 +44,10 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 import org.springframework.core.io.ClassPathResource
 import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator
 import tools.jackson.module.kotlin.readValue
+import java.net.URI
 import java.security.Principal
 import java.time.Instant
+import java.util.Date
 
 @JsonTest
 class OAuth2AuthorizationJsonTests {
@@ -65,6 +67,7 @@ class OAuth2AuthorizationJsonTests {
             it.allowIfSubType("kotlin.collections.EmptyMap")
             it.allowIfSubType("kotlin.collections.EmptySet")
             it.allowIfSubType("kotlin.collections.EmptyList")
+            it.allowIfSubType("java.net.URL")
         }.build()
         metadataMapper = mapperBuilder
             .activateDefaultTyping(typeValidator, DefaultTyping.JAVA_LANG_OBJECT, JsonTypeInfo.As.PROPERTY)
@@ -128,9 +131,11 @@ class OAuth2AuthorizationJsonTests {
             .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
             .authorizedScopes(setOf("openid"))
             .token(accessToken) { metadata ->
-                metadata[OAuth2Authorization.Token.CLAIMS_METADATA_NAME] = mapOf(
+                metadata[OAuth2Authorization.Token.CLAIMS_METADATA_NAME] = linkedMapOf(
                     "nbf" to issuedAt,
-                ).toMutableMap()
+                    "auth_time" to Date.from(issuedAt),
+                    "iss" to URI("https://identity.example").toURL(),
+                )
             }
             .refreshToken(refreshToken)
             .token(authorizationCode)

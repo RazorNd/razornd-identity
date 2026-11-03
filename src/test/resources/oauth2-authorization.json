@@ -3,7 +3,9 @@
   "registeredClientId": "client-internal-id",
   "principalName": "debug-user",
   "authorizationGrantType": "authorization_code",
-  "authorizedScopes": ["openid"],
+  "authorizedScopes": [
+    "openid"
+  ],
   "attributes": {
     "state": "authorization-state"
   },
@@ -27,7 +29,9 @@
     "authorizationUri": "https://identity.example/oauth2/authorize",
     "clientId": "debug-client",
     "redirectUri": "https://client.example/callback",
-    "scopes": ["openid"],
+    "scopes": [
+      "openid"
+    ],
     "state": "request-state",
     "additionalParameters": {
       "nonce": "debug-nonce"
@@ -44,13 +48,26 @@
       "issuedAt": "2026-01-02T03:04:05Z",
       "expiresAt": "2026-01-02T03:14:05Z",
       "tokenType": "Bearer",
-      "scopes": ["openid"],
+      "scopes": [
+        "openid"
+      ],
       "claims": {},
       "metadata": {
         "metadata.token.invalidated": false,
-        "metadata.token.claims" : {
-          "@class" : "java.util.LinkedHashMap",
-          "nbf" : [ "java.time.Instant", "2026-01-02T03:04:05Z" ]
+        "metadata.token.claims": {
+          "@class": "java.util.LinkedHashMap",
+          "nbf": [
+            "java.time.Instant",
+            "2026-01-02T03:04:05Z"
+          ],
+          "auth_time": [
+            "java.util.Date",
+            "2026-01-02T03:04:05.000Z"
+          ],
+          "iss": [
+            "java.net.URL",
+            "https://identity.example"
+          ]
         }
       }
     },
