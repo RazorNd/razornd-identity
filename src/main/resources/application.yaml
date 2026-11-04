@@ -6,6 +6,12 @@ spring:
       redis:
         namespace: razornd:identity:session
     timeout: 30d
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          cache-public: true
+          max-age: 2h
 
 razornd:
   identity:

@@ -30,6 +30,7 @@ import org.springframework.security.provisioning.JdbcUserDetailsManager
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher
 import javax.sql.DataSource
 
 @Configuration
@@ -72,9 +73,9 @@ class SecurityConfiguration {
     @Order(SecurityFilterProperties.BASIC_AUTH_ORDER)
     fun applicationSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http {
+            securityMatcher(NegatedRequestMatcher(PathRequest.toStaticResources().at(CSS, IMAGES, JAVA_SCRIPT)))
             authorizeHttpRequests {
                 authorize("/error", permitAll)
-                authorize(PathRequest.toStaticResources().at(CSS, IMAGES, JAVA_SCRIPT), permitAll)
                 authorize(anyRequest, authenticated)
             }
             cors { }
