@@ -32,8 +32,8 @@ import java.security.KeyStore
 class SigningKeyConfiguration {
     @Bean
     fun jwkSource(properties: SigningKeyProperties, resourceLoader: ResourceLoader): JWKSource<SecurityContext> {
-        require(properties.location.isNotBlank()) { "razornd.identity.signing-key.location must be configured" }
-        require(properties.activeKeyId.isNotBlank()) { "razornd.identity.signing-key.active-key-id must be configured" }
+        require(properties.location.isNotBlank()) { "identity.signing-key.location must be configured" }
+        require(properties.activeKeyId.isNotBlank()) { "identity.signing-key.active-key-id must be configured" }
 
         val storePassword = properties.storePassword.toCharArray()
         val keyStore = KeyStore.getInstance("PKCS12")

@@ -1,6 +1,17 @@
 spring:
+  config:
+    import: optional:configtree:/run/secrets/
   application:
     name: razornd-identity
+  datasource:
+    url: ${identity.db.url}
+    username: ${identity.db.username}
+    password: ${identity.db.password}
+  data:
+    redis:
+      host: ${identity.redis.host}
+      port: ${identity.redis.port:6379}
+      password: ${identity.redis.password}
   session:
     data:
       redis:
@@ -12,14 +23,9 @@ spring:
         cachecontrol:
           cache-public: true
           max-age: 2h
-
-razornd:
-  identity:
-    signing-key:
-      location: ${IDENTITY_SIGNING_KEY_LOCATION:}
-      store-password: ${IDENTITY_SIGNING_KEY_STORE_PASSWORD:}
-      key-passwords: { }
-      active-key-id: ${IDENTITY_SIGNING_KEY_ID:}
+server:
+  port: ${identity.server.port:8080}
+  forward-headers-strategy: ${identity.server.forward-headers-strategy:framework}
 
 logging:
   group:

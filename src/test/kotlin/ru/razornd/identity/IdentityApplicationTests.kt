@@ -50,10 +50,10 @@ import java.util.*
         "spring.security.oauth2.authorizationserver.client.test.registration.redirect-uris=/",
         "spring.security.oauth2.authorizationserver.client.test.registration.scopes=openid,profile",
         "spring.security.oauth2.authorizationserver.client.test.require-authorization-consent=true",
-        "razornd.identity.signing-key.location=classpath:test-signing-keys.p12",
-        "razornd.identity.signing-key.store-password=test-store-password",
-        "razornd.identity.signing-key.key-passwords[test-signing-key]=test-store-password",
-        "razornd.identity.signing-key.active-key-id=test-signing-key"
+        "identity.signing-key.location=classpath:test-signing-keys.p12",
+        "identity.signing-key.store-password=test-store-password",
+        "identity.signing-key.key-passwords[test-signing-key]=test-store-password",
+        "identity.signing-key.active-key-id=test-signing-key"
     ]
 )
 @Import(TestcontainersConfiguration::class, PlaywrightConfiguration::class)

@@ -18,7 +18,7 @@ package ru.razornd.identity
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 
-@ConfigurationProperties("razornd.identity.signing-key")
+@ConfigurationProperties("identity.signing-key")
 class SigningKeyProperties {
     var location: String = ""
     var storePassword: String = ""
