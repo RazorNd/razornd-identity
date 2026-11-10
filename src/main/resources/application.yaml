@@ -31,5 +31,14 @@ logging:
   group:
     authentication: org.springframework.security.authentication
     oauth2: org.springframework.security.oauth2
+  structured:
     json.add:
       'service.name': ${spring.application.name}
+      'service.version': ${spring.application.version}
+      'service.instance.id': ${INSTANCE_ID:unknown}
+
+management:
+  opentelemetry:
+    resource-attributes:
+      'service.version': ${spring.application.version}
+      'service.instance.id': ${INSTANCE_ID:unknown}
