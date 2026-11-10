@@ -138,10 +138,9 @@ jobs:
           --imageName="$IMAGE_NAME"
           -PadditionalTags
 
-      - name: Create version tag and GitHub Release
+      - name: Create version tag
         if: needs.test.outputs.prerelease == 'false'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.test.outputs.version }}
         run: |
           tag="v$VERSION"
@@ -151,7 +150,30 @@ jobs:
           fi
           git tag "$tag" "$GITHUB_SHA"
           git push origin "$tag"
+
+      - name: Generate release notes with git-cliff
+        if: needs.test.outputs.prerelease == 'false'
+        uses: orhun/git-cliff-action@v4.9.1
+        with:
+          version: v2.14.2
+          config: cliff.toml
+          args: --latest
+        env:
+          OUTPUT: release-notes.md
+
+      - name: Add container image to release notes
+        if: needs.test.outputs.prerelease == 'false'
+        env:
+          VERSION: ${{ needs.test.outputs.version }}
+        run: printf '\n## Container image\n\n`ghcr.io/%s:%s`\n' "$GITHUB_REPOSITORY" "$VERSION" >> release-notes.md
+
+      - name: Create GitHub Release
+        if: needs.test.outputs.prerelease == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.test.outputs.version }}
+        run: |
+          tag="v$VERSION"
           gh release create "$tag" \
             --title "$tag" \
-            --generate-notes \
-            --notes "Container image: ghcr.io/${GITHUB_REPOSITORY}:$VERSION"
+            --notes-file release-notes.md
