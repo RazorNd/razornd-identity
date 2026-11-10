@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "ru.razornd.platform"
-version = "0.0.1-SNAPSHOT"
+version = "0.1.0"
 description = "razornd-identity"
 
 java {
