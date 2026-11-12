@@ -137,6 +137,9 @@ jobs:
           ./gradlew bootBuildImage --no-daemon --publishImage
           --imageName="$IMAGE_NAME"
           -PadditionalTags
+          --environment BP_JVM_VERSION=27
+          --environment BP_JVM_AOTCACHE_ENABLED=true
+          --environment BP_UNPACK_LAYOUT_ONLY=true
 
       - name: Create version tag
         if: needs.test.outputs.prerelease == 'false'
