@@ -26,11 +26,16 @@ import org.springframework.core.annotation.Order
 import org.springframework.http.MediaType
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.invoke
+import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.provisioning.JdbcUserDetailsManager
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher
 import org.springframework.security.web.util.matcher.NegatedRequestMatcher
+import org.springframework.security.web.util.matcher.OrRequestMatcher
+import ru.razornd.identity.security.UserDetailsJwtAuthenticationConverter
 import javax.sql.DataSource
 
 @Configuration
@@ -39,6 +44,10 @@ class SecurityConfiguration {
     fun userDetailsManager(dataSource: DataSource) = JdbcUserDetailsManager(dataSource).apply {
         setEnableUpdatePassword(true)
     }
+
+    @Bean
+    fun apiJwtAuthenticationConverter(userDetailsService: UserDetailsService) =
+        UserDetailsJwtAuthenticationConverter(userDetailsService)
 
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -70,10 +79,42 @@ class SecurityConfiguration {
     }
 
     @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE + 1)
+    fun apiSecurityFilterChain(
+        http: HttpSecurity,
+        apiJwtAuthenticationConverter: UserDetailsJwtAuthenticationConverter,
+    ): SecurityFilterChain {
+        http {
+            securityMatcher("/api/**")
+            authorizeHttpRequests {
+                authorize(anyRequest, authenticated)
+            }
+            csrf { disable() }
+            sessionManagement {
+                sessionCreationPolicy = SessionCreationPolicy.STATELESS
+            }
+            oauth2ResourceServer {
+                jwt {
+                    jwtAuthenticationConverter = apiJwtAuthenticationConverter
+                }
+            }
+        }
+
+        return http.build()
+    }
+
+    @Bean
     @Order(SecurityFilterProperties.BASIC_AUTH_ORDER)
     fun applicationSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http {
-            securityMatcher(NegatedRequestMatcher(PathRequest.toStaticResources().at(CSS, IMAGES, JAVA_SCRIPT)))
+            securityMatcher(
+                NegatedRequestMatcher(
+                    OrRequestMatcher(
+                        PathRequest.toStaticResources().at(CSS, IMAGES, JAVA_SCRIPT),
+                        PathPatternRequestMatcher.withDefaults().matcher("/api/**")
+                    )
+                )
+            )
             authorizeHttpRequests {
                 authorize("/error", permitAll)
                 authorize(anyRequest, authenticated)
