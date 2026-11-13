@@ -93,6 +93,7 @@ class SecurityConfiguration {
         http {
             securityMatcher("/api/**")
             authorizeHttpRequests {
+                authorize("/api/admin/**", hasRole("ADMIN"))
                 authorize(anyRequest, authenticated)
             }
             csrf { disable() }

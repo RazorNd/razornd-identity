@@ -21,3 +21,11 @@ ON CONFLICT (username) DO NOTHING;
 INSERT INTO authorities (username, authority)
 VALUES ('test-user', 'ROLE_USER')
 ON CONFLICT (username, authority) DO NOTHING;
+
+INSERT INTO users (username, password, enabled)
+VALUES ('test-admin', '{noop}test-admin-password', TRUE)
+ON CONFLICT (username) DO NOTHING;
+
+INSERT INTO authorities (username, authority)
+VALUES ('test-admin', 'ROLE_ADMIN')
+ON CONFLICT (username, authority) DO NOTHING;

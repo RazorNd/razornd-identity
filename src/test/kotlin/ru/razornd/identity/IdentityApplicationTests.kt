@@ -19,6 +19,7 @@ package ru.razornd.identity
 import com.microsoft.playwright.Page
 import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient
@@ -27,16 +28,21 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDO
 import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.jdbc.core.simple.JdbcClient
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.oauth2.core.OAuth2AccessToken
 import org.springframework.security.oauth2.core.OAuth2RefreshToken
 import org.springframework.test.context.jdbc.Sql
 import org.springframework.test.web.servlet.client.RestTestClient
+import org.springframework.test.web.servlet.client.expectBody
 import org.springframework.util.MultiValueMap
 import org.springframework.web.util.DefaultUriBuilderFactory
 import org.springframework.web.util.UriComponentsBuilder
+import ru.razornd.identity.account.CreatedAccountResponse
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.*
+import java.util.function.BiPredicate
 
 @AutoConfigureRestTestClient
 @SpringBootTest(
@@ -64,6 +70,12 @@ class IdentityApplicationTests {
 
     @Autowired
     lateinit var client: RestTestClient
+
+    @Autowired
+    lateinit var jdbcClient: JdbcClient
+
+    @Autowired
+    lateinit var passwordEncoder: PasswordEncoder
 
     @Test
     fun authorizationCodeFlowReturnsTokens(@Autowired page: Page) {
@@ -276,6 +288,186 @@ class IdentityApplicationTests {
             .expectBody()
             .jsonPath("$.active").isEqualTo(false)
     }
+
+    @Nested
+    @Sql(
+        scripts = [
+            "classpath:sql/create-test-user.sql",
+            "classpath:sql/create-admin-account-test-users.sql",
+        ]
+    )
+    inner class AdminAccountApiTests {
+        @Test
+        @WithOAuthAuthorization(principalName = "test-admin", createAccessToken = true)
+        fun `creates an account with a supplied password`(accessToken: OAuth2AccessToken) {
+            val username = "admin-created-${UUID.randomUUID().toString().replace("-", "")}"
+
+            client.post()
+                .uri("/api/admin/accounts")
+                .headers { it.setBearerAuth(accessToken.tokenValue) }
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(mapOf("username" to username, "password" to "supplied-password", "enabled" to false))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectHeader().valueEquals("Location", "http://localhost:$port/api/admin/accounts/$username")
+                .expectBody()
+                .jsonPath("$.username").isEqualTo(username)
+                .jsonPath("$.enabled").isEqualTo(false)
+                .jsonPath("$.generatedPassword").doesNotExist()
+
+            assertThat(findDatabaseAccount(username))
+                .usingRecursiveComparison()
+                .withEqualsForFields(encodedPasswordMatches(), "password")
+                .isEqualTo(DatabaseAccount(password = "supplied-password", enabled = false))
+        }
+
+        @Test
+        @WithOAuthAuthorization(principalName = "test-admin", createAccessToken = true)
+        fun `creates an account with a generated password`(accessToken: OAuth2AccessToken) {
+            val username = "admin-generated-${UUID.randomUUID().toString().replace("-", "")}"
+
+            val result = client.post()
+                .uri("/api/admin/accounts")
+                .headers { it.setBearerAuth(accessToken.tokenValue) }
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(mapOf("username" to username))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody<CreatedAccountResponse>()
+                .value {
+                    assertThat(it)
+                        .usingRecursiveComparison()
+                        .ignoringFields("generatedPassword")
+                        .isEqualTo(CreatedAccountResponse(username = username, enabled = true))
+                }
+                .returnResult()
+
+            assertThat(findDatabaseAccount(username))
+                .usingRecursiveComparison()
+                .withEqualsForFields(encodedPasswordMatches(), "password")
+                .isEqualTo(
+                    DatabaseAccount(
+                        password = checkNotNull(result.responseBody?.generatedPassword),
+                        enabled = true
+                    )
+                )
+        }
+
+        @Test
+        @WithOAuthAuthorization(principalName = "test-admin", createAccessToken = true)
+        fun `gets an existing account`(accessToken: OAuth2AccessToken) {
+            client.get()
+                .uri("/api/admin/accounts/test-user")
+                .headers { it.setBearerAuth(accessToken.tokenValue) }
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.username").isEqualTo("test-user")
+                .jsonPath("$.enabled").isEqualTo(true)
+        }
+
+        @Test
+        @WithOAuthAuthorization(principalName = "test-admin", createAccessToken = true)
+        fun `updates only the password`(accessToken: OAuth2AccessToken) {
+            val username = "admin-password-update"
+
+            client.patch()
+                .uri("/api/admin/accounts/$username")
+                .headers { it.setBearerAuth(accessToken.tokenValue) }
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(mapOf("password" to "updated-password"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.username").isEqualTo(username)
+                .jsonPath("$.enabled").isEqualTo(true)
+
+            assertThat(findDatabaseAccount(username))
+                .usingRecursiveComparison()
+                .withEqualsForFields(encodedPasswordMatches(), "password")
+                .isEqualTo(DatabaseAccount(password = "updated-password", enabled = true))
+        }
+
+        @Test
+        @WithOAuthAuthorization(principalName = "test-admin", createAccessToken = true)
+        fun `updates only the enabled state`(accessToken: OAuth2AccessToken) {
+            val username = "admin-enabled-update"
+
+            client.patch()
+                .uri("/api/admin/accounts/$username")
+                .headers { it.setBearerAuth(accessToken.tokenValue) }
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(mapOf("enabled" to false))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.username").isEqualTo(username)
+                .jsonPath("$.enabled").isEqualTo(false)
+
+            assertThat(findDatabaseAccount(username))
+                .usingRecursiveComparison()
+                .withEqualsForFields(encodedPasswordMatches(), "password")
+                .isEqualTo(DatabaseAccount(password = "initial-password", enabled = false))
+        }
+
+        @Test
+        @WithOAuthAuthorization(principalName = "test-admin", createAccessToken = true)
+        fun `updates password and enabled state together`(accessToken: OAuth2AccessToken) {
+            val username = "admin-update-both"
+
+            client.patch()
+                .uri("/api/admin/accounts/$username")
+                .headers { it.setBearerAuth(accessToken.tokenValue) }
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(mapOf("password" to "updated-password", "enabled" to false))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.username").isEqualTo(username)
+                .jsonPath("$.enabled").isEqualTo(false)
+
+            assertThat(findDatabaseAccount(username))
+                .usingRecursiveComparison()
+                .withEqualsForFields(encodedPasswordMatches(), "password")
+                .isEqualTo(DatabaseAccount(password = "updated-password", enabled = false))
+        }
+
+        @Test
+        @WithOAuthAuthorization(principalName = "test-admin", createAccessToken = true)
+        fun `deactivates an account without deleting it`(accessToken: OAuth2AccessToken) {
+            val username = "admin-disable-account"
+
+            client.delete()
+                .uri("/api/admin/accounts/$username")
+                .headers { it.setBearerAuth(accessToken.tokenValue) }
+                .exchange()
+                .expectStatus().isNoContent()
+
+            assertThat(findDatabaseAccount(username))
+                .usingRecursiveComparison()
+                .withEqualsForFields(encodedPasswordMatches(), "password")
+                .isEqualTo(DatabaseAccount(password = "initial-password", enabled = false))
+        }
+    }
+
+    private fun findDatabaseAccount(username: String): DatabaseAccount =
+        jdbcClient.sql("SELECT password, enabled FROM users WHERE username = :username")
+            .param("username", username)
+            .query { resultSet, _ ->
+                DatabaseAccount(
+                    password = resultSet.getString("password"),
+                    enabled = resultSet.getBoolean("enabled"),
+                )
+            }
+            .single()
+
+    private fun encodedPasswordMatches(): BiPredicate<String, String> =
+        BiPredicate { actual: String, expected: String -> passwordEncoder.matches(expected, actual) }
+
+    private data class DatabaseAccount(
+        val password: String,
+        val enabled: Boolean,
+    )
 
     private fun authorizationRequest(scopes: Set<String> = setOf("openid", "profile")): AuthorizationRequest {
         val codeVerifier = base64Url(ByteArray(32).also(SecureRandom()::nextBytes))
