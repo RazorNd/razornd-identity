@@ -20,8 +20,6 @@ import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.core.userdetails.UserDetails
-import org.springframework.security.crypto.factory.PasswordEncoderFactories.createDelegatingPasswordEncoder
-import org.springframework.security.provisioning.UserDetailsManager
 import org.springframework.stereotype.Controller
 import org.springframework.validation.BindingResult
 import org.springframework.web.bind.annotation.GetMapping
@@ -30,17 +28,19 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.servlet.ModelAndView
 import java.security.Principal
 
+/** Handles browser-based account self-service operations. */
 @Controller
-class AccountController(private val userDetailsManager: UserDetailsManager) {
-
-    private val passwordEncoder = createDelegatingPasswordEncoder()
-
+class AccountController(private val accountService: AccountService) {
     @GetMapping("/change-password")
     fun changePassword(principal: Principal) = ModelAndView(
         "change-password",
         mapOf("username" to principal.name, "changePasswordForm" to ChangePasswordForm())
     )
 
+    /**
+     * Validates the submitted form, delegates the password change, and binds an invalid-current-
+     * password error to the form when the service rejects the current password.
+     */
     @PostMapping("/change-password")
     fun changePassword(
         @AuthenticationPrincipal
@@ -50,23 +50,12 @@ class AccountController(private val userDetailsManager: UserDetailsManager) {
     ): ModelAndView {
         if (bindingResult.hasErrors()) return changePasswordWithError(principal)
 
-        val currentUser = userDetailsManager.loadUserByUsername(principal.username)
-
-        return when {
-            form.newPassword != form.repeatPassword -> {
-                bindingResult.rejectValue("repeatPassword", "password.mismatch", "The passwords do not match.")
-                changePasswordWithError(principal)
-            }
-
-            !passwordEncoder.matches(form.oldPassword, currentUser.password) -> {
-                bindingResult.rejectValue("oldPassword", "password.invalid", "The current password is incorrect.")
-                changePasswordWithError(principal)
-            }
-
-            else -> {
-                userDetailsManager.changePassword(form.oldPassword, passwordEncoder.encode(form.newPassword))
-                ModelAndView("redirect:/")
-            }
+        return try {
+            accountService.changePasswordForCurrentUser(principal.username, form.oldPassword, form.newPassword)
+            ModelAndView("redirect:/")
+        } catch (_: InvalidCurrentPasswordException) {
+            bindingResult.rejectValue("oldPassword", "password.invalid", "The current password is incorrect.")
+            changePasswordWithError(principal)
         }
     }
 

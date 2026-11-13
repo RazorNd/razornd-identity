@@ -17,14 +17,13 @@
 package ru.razornd.identity.account
 
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.*
-import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doThrow
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
-import org.springframework.security.core.userdetails.User
-import org.springframework.security.crypto.factory.PasswordEncoderFactories.createDelegatingPasswordEncoder
-import org.springframework.security.provisioning.UserDetailsManager
 import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.test.context.bean.override.mockito.MockitoBean
@@ -38,15 +37,11 @@ class AccountControllerTests {
     lateinit var mockMvc: MockMvc
 
     @MockitoBean
-    lateinit var userDetailsManager: UserDetailsManager
+    lateinit var accountService: AccountService
 
     @Test
     @WithMockUser
     fun `changes password when form is valid`() {
-        doAnswer { (username: String) ->
-            User.withUsername(username).password("{noop}current-pass").build()
-        }.whenever(userDetailsManager).loadUserByUsername(any())
-
         mockMvc.post("/change-password") {
             param("oldPassword", "current-pass")
             param("newPassword", "new-password")
@@ -57,9 +52,7 @@ class AccountControllerTests {
             redirectedUrl("/")
         }
 
-        verify(userDetailsManager).changePassword(eq("current-pass"), argThat {
-            createDelegatingPasswordEncoder().matches("new-password", it)
-        })
+        verify(accountService).changePasswordForCurrentUser("user", "current-pass", "new-password")
     }
 
     @Test
@@ -78,16 +71,12 @@ class AccountControllerTests {
             }
         }
 
-        verify(userDetailsManager, never()).changePassword(any(), any())
+        verify(accountService, never()).changePasswordForCurrentUser(any(), any(), any())
     }
 
     @Test
     @WithMockUser
     fun `renders error when password confirmation does not match`() {
-        doAnswer { (username: String) ->
-            User.withUsername(username).password("{noop}current-pass").build()
-        }.whenever(userDetailsManager).loadUserByUsername(any())
-
         mockMvc.post("/change-password") {
             param("oldPassword", "current-pass")
             param("newPassword", "new-password")
@@ -99,15 +88,15 @@ class AccountControllerTests {
             model { attributeHasFieldErrors("changePasswordForm", "repeatPassword") }
         }
 
-        verify(userDetailsManager, never()).changePassword(any(), any())
+        verify(accountService, never()).changePasswordForCurrentUser(any(), any(), any())
     }
 
     @Test
     @WithMockUser(username = "test-user")
     fun `rejects old password that does not match the stored password`() {
-        doAnswer { (username: String) ->
-            User.withUsername(username).password("{noop}stored-password").build()
-        }.whenever(userDetailsManager).loadUserByUsername(any())
+        doThrow(InvalidCurrentPasswordException())
+            .whenever(accountService)
+            .changePasswordForCurrentUser(any(), any(), any())
 
         mockMvc.post("/change-password") {
             param("oldPassword", "wrong-password")
@@ -120,8 +109,7 @@ class AccountControllerTests {
             model { attributeHasFieldErrors("changePasswordForm", "oldPassword") }
         }
 
-        verify(userDetailsManager).loadUserByUsername("test-user")
-        verify(userDetailsManager, never()).changePassword(any(), any())
+        verify(accountService).changePasswordForCurrentUser("test-user", "wrong-password", "new-password")
     }
 
     @Test

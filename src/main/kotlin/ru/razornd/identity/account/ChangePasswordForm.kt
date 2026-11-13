@@ -19,6 +19,7 @@ package ru.razornd.identity.account
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 
+@PasswordsMatch
 data class ChangePasswordForm(
     @field:NotBlank(message = "Enter your current password.")
     val oldPassword: String = "",
