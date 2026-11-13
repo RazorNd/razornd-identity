@@ -1,0 +1,29 @@
+@username = {{$random.name.username}}
+
+### Create new Account
+POST {{ServerAddress}}/api/admin/accounts
+Content-Type: application/json
+Authorization: Bearer {{$auth.token("http-client")}}
+
+{
+  "username": "{{username}}"
+}
+
+### Get Account
+GET {{ServerAddress}}/api/admin/accounts/{{username}}
+Accept: application/json
+Authorization: Bearer {{$auth.token("http-client")}}
+
+### Update Account
+PATCH {{ServerAddress}}/api/admin/accounts/{{username}}
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{$auth.token("http-client")}}
+
+{
+  "password": "{{$random.internet.password}}"
+}
+
+### Disable Account
+DELETE {{ServerAddress}}/api/admin/accounts/{{username}}
+Authorization: Bearer {{$auth.token("http-client")}}

@@ -1,0 +1,28 @@
+# That file for local development only
+
+spring:
+  security:
+    oauth2:
+      authorizationserver:
+        client:
+          idea-http-client:
+            require-authorization-consent: true
+            require-proof-key: true
+            registration:
+              client-id: http-client
+              client-name: Idea HTTP Client
+              authorization-grant-types:
+                - authorization_code
+              client-authentication-methods:
+                - none
+              redirect-uris:
+                - http://127.0.0.1:0/oauth2/callback
+              scopes:
+                - openid
+                - profile
+
+identity:
+  signing-key:
+    store-password: local-keystore-password
+    active-key-id: local-signing-key
+    location: file:local-signing-keystore.p12
