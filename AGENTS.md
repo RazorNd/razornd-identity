@@ -5,6 +5,7 @@
 - Verify with `./gradlew test`; isolate the context test with `./gradlew test --tests 'ru.razornd.identity.IdentityApplicationTests'`. Tests start PostgreSQL, Redis, and Grafana LGTM via Testcontainers, so Docker must be available.
 - Keep Testcontainers image tags in `src/test/kotlin/ru/razornd/identity/TestcontainersConfiguration.kt` aligned with `compose.yaml`.
 - New Kotlin files need the Apache 2.0 header used by existing Kotlin sources.
+- Prefer IDEA MCP for code search, navigation, and source inspection (including dependency sources) when available; use shell-based inspection only when IDEA tools cannot access the target.
 - When IDEA tools are available, use `reformat_file` on changed code files and `lint_files` to check them for errors and warnings. Use `build_project` for IDE compilation diagnostics; run `./gradlew test` for test verification.
 
 ## Commit messages
