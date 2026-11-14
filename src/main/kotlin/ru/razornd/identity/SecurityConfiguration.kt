@@ -23,7 +23,9 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
+import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
+import org.springframework.security.authentication.DisabledException
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.invoke
 import org.springframework.security.config.http.SessionCreationPolicy
@@ -32,6 +34,7 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.provisioning.JdbcUserDetailsManager
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.authentication.ExceptionMappingAuthenticationFailureHandler
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher
@@ -39,6 +42,7 @@ import org.springframework.security.web.util.matcher.NegatedRequestMatcher
 import org.springframework.security.web.util.matcher.OrRequestMatcher
 import ru.razornd.identity.security.UserDetailsJwtAuthenticationConverter
 import javax.sql.DataSource
+import kotlin.reflect.jvm.jvmName
 
 @Configuration
 class SecurityConfiguration {
@@ -124,13 +128,20 @@ class SecurityConfiguration {
             )
             authorizeHttpRequests {
                 authorize("/error", permitAll)
+                authorize(HttpMethod.GET, "/login", permitAll)
+                authorize(HttpMethod.GET, "/account-disabled", permitAll)
                 authorize(anyRequest, authenticated)
             }
             cors { }
             csrf { }
             formLogin {
                 loginPage = "/login"
-                permitAll()
+                authenticationFailureHandler = ExceptionMappingAuthenticationFailureHandler().apply {
+                    setDefaultFailureUrl("/login?error")
+                    setExceptionMappings(
+                        mapOf(DisabledException::class.jvmName to "/account-disabled")
+                    )
+                }
             }
             logout {
                 logoutUrl = "/logout"

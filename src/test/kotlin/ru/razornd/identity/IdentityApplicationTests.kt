@@ -18,6 +18,7 @@ package ru.razornd.identity
 
 import com.microsoft.playwright.Page
 import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
+import com.microsoft.playwright.options.AriaRole
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -287,6 +288,34 @@ class IdentityApplicationTests {
             .expectStatus().isOk()
             .expectBody()
             .jsonPath("$.active").isEqualTo(false)
+    }
+
+    @Nested
+    inner class AuthenticationTests {
+        @Test
+        fun `shows an error after login with incorrect password`(@Autowired page: Page) {
+            page.navigate("/login")
+            page.fill("input[name=username]", "test-user")
+            page.fill("input[name=password]", "incorrect-password")
+            page.click("button[type=submit]")
+
+            assertThat(page.url()).contains("/login?error")
+            assertThat(page.getByRole(AriaRole.ALERT))
+                .containsText("The username or password is incorrect. Please try again.")
+        }
+
+        @Test
+        fun `shows an error after login with disabled user`(@Autowired page: Page) {
+            page.navigate("/login")
+            page.fill("input[name=username]", "disabled-test-user")
+            page.fill("input[name=password]", "test-user-password")
+            page.click("button[type=submit]")
+
+            assertThat(page.url()).contains("/account-disabled")
+            assertThat(page.getByRole(AriaRole.ALERT))
+                .containsText("Your account is disabled")
+            assertThat(page.getByText("Please contact the administration to have it re-enabled.")).isVisible()
+        }
     }
 
     @Nested

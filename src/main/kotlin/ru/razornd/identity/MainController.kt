@@ -29,6 +29,9 @@ class MainController {
     @GetMapping("/login", params = ["error"])
     fun loginError() = ModelAndView("login", mapOf("error" to true))
 
+    @GetMapping("/account-disabled")
+    fun accountDisabled() = ModelAndView("account-disabled")
+
     @GetMapping("/")
     fun home(principal: Principal) = ModelAndView("home", mapOf("username" to principal.name))
 
