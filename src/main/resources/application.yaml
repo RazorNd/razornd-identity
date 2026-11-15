@@ -27,6 +27,10 @@ server:
   port: ${identity.server.port:8080}
   forward-headers-strategy: ${identity.server.forward-headers-strategy:framework}
 
+identity:
+  oauth2:
+    scopes: []
+
 logging:
   group:
     authentication: org.springframework.security.authentication

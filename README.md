@@ -70,6 +70,24 @@ Non-secret properties can be supplied in an external `application.yml` or throug
 | `identity.server.port` | No | HTTP port; defaults to `8080`. |
 | `identity.server.forward-headers-strategy` | No | Forwarded-header handling; defaults to `framework`. |
 
+## OAuth2 scopes
+
+The server maintains a scope catalog with English display names and descriptions. Add custom scopes under `identity.oauth2.scopes` in `application.yml`:
+
+```yaml
+identity:
+  oauth2:
+    scopes:
+      - name: orders.read
+        display-name: Read orders
+        description: Allows the application to view your orders.
+        consent-visible: true
+```
+
+The catalog includes the standard OpenID Connect scopes `openid`, `profile`, `email`, `address`, and `phone`; do not add these to configuration. The application fails to start if a configured scope duplicates another custom scope or uses one of these built-in names.
+
+`consent-visible` controls whether a scope should be presented as a permission on the consent page; it does not grant or approve the scope. The consent page does not yet use the catalog.
+
 The application imports `/run/secrets/` as a Spring Boot configtree. Mount secret files there with filenames equal to their property names:
 
 | Secret filename | Purpose |
