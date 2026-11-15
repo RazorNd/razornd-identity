@@ -86,7 +86,7 @@ identity:
 
 The catalog includes the standard OpenID Connect scopes `openid`, `profile`, `email`, `address`, and `phone`; do not add these to configuration. The application fails to start if a configured scope duplicates another custom scope or uses one of these built-in names.
 
-`consent-visible` controls whether a scope should be presented as a permission on the consent page; it does not grant or approve the scope. The consent page does not yet use the catalog.
+`consent-visible` controls whether a scope is presented as a permission on the consent page. Scopes set to `false` are submitted with the form as hidden scope values and are granted only when the user approves the request. The consent page uses each visible scope's display name and description.
 
 The application imports `/run/secrets/` as a Spring Boot configtree. Mount secret files there with filenames equal to their property names:
 

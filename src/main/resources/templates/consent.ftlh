@@ -2,7 +2,8 @@
 <#-- @ftlvariable name="principalName" type="java.lang.String" -->
 <#-- @ftlvariable name="clientId" type="java.lang.String" -->
 <#-- @ftlvariable name="state" type="java.lang.String" -->
-<#-- @ftlvariable name="scopes" type="java.util.Collection<java.lang.String>" -->
+<#-- @ftlvariable name="scopes" type="java.util.Collection<ru.razornd.identity.oauth.ScopeDefinition>" -->
+<#-- @ftlvariable name="hiddenScopes" type="java.util.Collection<java.lang.String>" -->
 <#-- @ftlvariable name="previouslyAuthorizedScopes" type="java.util.Collection<java.lang.String>" -->
 <#import "/spring.ftl" as spring />
 <#import "layout/main.ftlh" as layout />
@@ -19,13 +20,19 @@
             <@csrf.field />
             <input type="hidden" name="client_id" value="${(clientId!'')}">
             <input type="hidden" name="state" value="${(state!'')}">
+            <#list hiddenScopes as scope>
+                <input type="hidden" name="scope" value="${scope}">
+            </#list>
             <h2 class="permission-title">Requested permissions</h2>
             <#list scopes as scope>
-                <label class="permission" for="${scope}">
+                <label class="permission" for="${scope.name}">
                     <span class="permission-icon" aria-hidden="true">✓</span>
-                    <span><h2>${scope}</h2><p>Allow this application to access the ${scope} permission.</p></span>
-                    <input id="${scope}" type="checkbox" name="scope" value="${scope}"
-                           <#if previouslyAuthorizedScopes?seq_contains(scope)>checked disabled</#if>>
+                    <span class="permission-copy">
+                        <span class="permission-name" role="heading" aria-level="3">${scope.displayName}</span>
+                        <span class="permission-description">${scope.description}</span>
+                    </span>
+                    <input id="${scope.name}" type="checkbox" name="scope" value="${scope.name}"
+                           <#if previouslyAuthorizedScopes?seq_contains(scope.name)>checked disabled</#if>>
                 </label>
             </#list>
             <p class="consent-note">Only grant access to applications you trust.</p>

@@ -140,9 +140,9 @@ class IdentityApplicationTests {
         page.click("button[type=submit]")
 
         assertThat(page.getByText("Consent required")).isVisible()
-        assertThat(page.getByText("profile", Page.GetByTextOptions().setExact(true))).isVisible()
-        assertThat(page.locator("#openid")).isChecked()
-        assertThat(page.locator("#openid")).isDisabled()
+        assertThat(page.getByText("Profile", Page.GetByTextOptions().setExact(true))).isVisible()
+        assertThat(page.getByText("Allows the application to access your basic profile information.")).isVisible()
+        assertThat(page.locator("#openid").count()).isZero()
         assertThat(page.locator("#profile")).not().isChecked()
         page.check("input[name=scope][value=profile]")
         page.click("button#submit-consent")

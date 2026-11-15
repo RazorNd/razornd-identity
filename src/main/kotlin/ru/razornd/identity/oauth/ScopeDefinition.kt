@@ -24,6 +24,9 @@ data class ScopeDefinition(
     val displayName: String,
     /** English explanation of the access requested by the scope. */
     val description: String,
-    /** Whether the scope should be shown as a permission on the consent page. */
+    /**
+     * Whether the scope should be shown as a permission on the consent page.
+     * Scopes not shown are submitted as hidden fields and granted when the user approves the request.
+     */
     val consentVisible: Boolean = true,
 )

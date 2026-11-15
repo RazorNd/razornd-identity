@@ -28,6 +28,7 @@ import java.security.Principal
 class OAuthController(
     private val clientRepository: RegisteredClientRepository,
     private val consentService: OAuth2AuthorizationConsentService,
+    private val scopeRegistry: ScopeRegistry,
 ) {
     @GetMapping("/oauth2/consent")
     fun consent(
@@ -37,11 +38,15 @@ class OAuthController(
         principal: Principal,
     ): ModelAndView {
         val client = requireNotNull(clientRepository.findByClientId(clientId))
-        val previouslyAuthorizedScopes = consentService.findById(client.id, principal.name)
+        val previouslyAuthorizedScopes = consentService.findById(client.clientId, principal.name)
             ?.authorities
             ?.mapNotNull { it.authority?.removePrefix("SCOPE_") }
             ?.toSet()
             .orEmpty()
+        val requestedScopes = scope.split(Regex("\\s+")).filter(String::isNotBlank).distinct()
+        val scopeDefinitions = scopeRegistry.requireAll(requestedScopes)
+
+        val (visibleScopes, hiddenScopes) = scopeDefinitions.partition { it.consentVisible }
 
         return ModelAndView(
             "consent",
@@ -49,9 +54,10 @@ class OAuthController(
                 "clientId" to clientId,
                 "clientName" to client.clientName,
                 "principalName" to principal.name,
-                "scopes" to scope.split(" "),
+                "scopes" to visibleScopes,
+                "hiddenScopes" to hiddenScopes.map { it.name },
                 "state" to state,
-                "previouslyAuthorizedScopes" to (previouslyAuthorizedScopes + "openid").toList(),
+                "previouslyAuthorizedScopes" to previouslyAuthorizedScopes.toList(),
             )
         )
     }
