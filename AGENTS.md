@@ -7,6 +7,7 @@
 - New Kotlin files need the Apache 2.0 header used by existing Kotlin sources.
 - Prefer IDEA MCP for code search, navigation, and source inspection (including dependency sources) when available; use shell-based inspection only when IDEA tools cannot access the target.
 - When IDEA tools are available, use `reformat_file` on changed code files and `lint_files` to check them for errors and warnings. Use `build_project` for IDE compilation diagnostics; run `./gradlew test` for test verification.
+- When stubbing Mockito in Kotlin, prefer `doReturn(value).whenever(mock).method(...)` over `whenever(mock.method(...)).thenReturn(value)`.
 
 ## Commit messages
 
