@@ -319,6 +319,55 @@ class IdentityApplicationTests {
     }
 
     @Nested
+    inner class AuthorizationRequestValidationTests {
+        @Test
+        fun `does not redirect to an unregistered redirect uri`() {
+            val callback = "https://attacker.example/callback"
+            val request = authorizationRequest(redirectUri = callback)
+
+            val response = client.get()
+                .uri(request.url)
+                .exchange()
+
+            val location = response.returnResult().responseHeaders.getFirst("Location")
+            assertThat(location == null || !location.startsWith(callback)).isTrue()
+        }
+
+        @Test
+        fun `does not redirect when client id is unknown`() {
+            val callback = "http://localhost:$port/"
+            val request = authorizationRequest(clientId = "unknown-client", redirectUri = callback)
+
+            val response = client.get()
+                .uri(request.url)
+                .exchange()
+
+            val location = response.returnResult().responseHeaders.getFirst("Location")
+            assertThat(location == null || !location.startsWith(callback)).isTrue()
+        }
+
+        @Test
+        fun `redirects invalid scope error to the validated callback`() {
+            val state = UUID.randomUUID().toString()
+            val request = authorizationRequest(scopes = setOf("unknown-scope"), state = state)
+
+            val location = client.get()
+                .uri(request.url)
+                .exchange()
+                .returnResult()
+                .responseHeaders
+                .getFirst("Location")
+
+            assertThat(location).isNotNull
+            val responseParameters = UriComponentsBuilder.fromUriString(requireNotNull(location))
+                .build()
+                .queryParams
+            assertThat(responseParameters["error"]).containsExactly("invalid_scope")
+            assertThat(responseParameters["state"]).containsExactly(state)
+        }
+    }
+
+    @Nested
     @Sql(
         scripts = [
             "classpath:sql/create-test-user.sql",
@@ -498,17 +547,21 @@ class IdentityApplicationTests {
         val enabled: Boolean,
     )
 
-    private fun authorizationRequest(scopes: Set<String> = setOf("openid", "profile")): AuthorizationRequest {
+    private fun authorizationRequest(
+        scopes: Set<String> = setOf("openid", "profile"),
+        clientId: String = "test-client",
+        redirectUri: String = "/",
+        state: String = UUID.randomUUID().toString(),
+    ): AuthorizationRequest {
         val codeVerifier = base64Url(ByteArray(32).also(SecureRandom()::nextBytes))
         val codeChallenge = base64Url(MessageDigest.getInstance("SHA-256").digest(codeVerifier.toByteArray()))
-        val redirectUri = "/"
         val url = DefaultUriBuilderFactory("http://localhost:$port")
             .uriString("/oauth2/authorize")
             .queryParam("response_type", "code")
-            .queryParam("client_id", "test-client")
+            .queryParam("client_id", clientId)
             .queryParam("redirect_uri", redirectUri)
             .queryParam("scope", scopes.joinToString(" "))
-            .queryParam("state", UUID.randomUUID().toString())
+            .queryParam("state", state)
             .queryParam("nonce", UUID.randomUUID().toString())
             .queryParam("code_challenge", codeChallenge)
             .queryParam("code_challenge_method", "S256")
