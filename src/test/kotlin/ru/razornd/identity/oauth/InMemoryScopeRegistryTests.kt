@@ -37,6 +37,14 @@ class InMemoryScopeRegistryTests {
                     consentVisible = false,
                 )
             )
+        assertThat(registry.find("accounts:admin"))
+            .isEqualTo(
+                ScopeDefinition(
+                    "accounts:admin",
+                    "Manage accounts",
+                    "Allows the application to create, view, update, and disable user accounts.",
+                )
+            )
         assertThat(registry.requireAll(listOf("orders.read", OidcScopes.PROFILE)))
             .containsExactly(customScope, registry.find(OidcScopes.PROFILE))
     }

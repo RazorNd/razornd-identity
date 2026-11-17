@@ -20,6 +20,7 @@ spring:
               scopes:
                 - openid
                 - profile
+                - accounts:admin
 
 identity:
   signing-key:

@@ -55,7 +55,7 @@ import java.util.function.BiPredicate
         "spring.security.oauth2.authorizationserver.client.test.registration.client-authentication-methods=client_secret_basic,client_secret_post",
         "spring.security.oauth2.authorizationserver.client.test.registration.authorization-grant-types=authorization_code,refresh_token,client_credentials",
         "spring.security.oauth2.authorizationserver.client.test.registration.redirect-uris=/",
-        "spring.security.oauth2.authorizationserver.client.test.registration.scopes=openid,profile",
+        "spring.security.oauth2.authorizationserver.client.test.registration.scopes=openid,profile,accounts:admin",
         "spring.security.oauth2.authorizationserver.client.test.require-authorization-consent=true",
         "identity.signing-key.location=classpath:test-signing-keys.p12",
         "identity.signing-key.store-password=test-store-password",
@@ -376,7 +376,11 @@ class IdentityApplicationTests {
     )
     inner class AdminAccountApiTests {
         @Test
-        @WithOAuthAuthorization(principalName = "test-admin", createAccessToken = true)
+        @WithOAuthAuthorization(
+            principalName = "test-admin",
+            authorizedScopes = ["openid", "profile", "accounts:admin"],
+            createAccessToken = true
+        )
         fun `creates an account with a supplied password`(accessToken: OAuth2AccessToken) {
             val username = "admin-created-${UUID.randomUUID().toString().replace("-", "")}"
 
@@ -400,7 +404,11 @@ class IdentityApplicationTests {
         }
 
         @Test
-        @WithOAuthAuthorization(principalName = "test-admin", createAccessToken = true)
+        @WithOAuthAuthorization(
+            principalName = "test-admin",
+            authorizedScopes = ["openid", "profile", "accounts:admin"],
+            createAccessToken = true
+        )
         fun `creates an account with a generated password`(accessToken: OAuth2AccessToken) {
             val username = "admin-generated-${UUID.randomUUID().toString().replace("-", "")}"
 
@@ -432,7 +440,11 @@ class IdentityApplicationTests {
         }
 
         @Test
-        @WithOAuthAuthorization(principalName = "test-admin", createAccessToken = true)
+        @WithOAuthAuthorization(
+            principalName = "test-admin",
+            authorizedScopes = ["openid", "profile", "accounts:admin"],
+            createAccessToken = true
+        )
         fun `gets an existing account`(accessToken: OAuth2AccessToken) {
             client.get()
                 .uri("/api/admin/accounts/test-user")
@@ -445,7 +457,11 @@ class IdentityApplicationTests {
         }
 
         @Test
-        @WithOAuthAuthorization(principalName = "test-admin", createAccessToken = true)
+        @WithOAuthAuthorization(
+            principalName = "test-admin",
+            authorizedScopes = ["openid", "profile", "accounts:admin"],
+            createAccessToken = true
+        )
         fun `updates only the password`(accessToken: OAuth2AccessToken) {
             val username = "admin-password-update"
 
@@ -467,7 +483,11 @@ class IdentityApplicationTests {
         }
 
         @Test
-        @WithOAuthAuthorization(principalName = "test-admin", createAccessToken = true)
+        @WithOAuthAuthorization(
+            principalName = "test-admin",
+            authorizedScopes = ["openid", "profile", "accounts:admin"],
+            createAccessToken = true
+        )
         fun `updates only the enabled state`(accessToken: OAuth2AccessToken) {
             val username = "admin-enabled-update"
 
@@ -489,7 +509,11 @@ class IdentityApplicationTests {
         }
 
         @Test
-        @WithOAuthAuthorization(principalName = "test-admin", createAccessToken = true)
+        @WithOAuthAuthorization(
+            principalName = "test-admin",
+            authorizedScopes = ["openid", "profile", "accounts:admin"],
+            createAccessToken = true
+        )
         fun `updates password and enabled state together`(accessToken: OAuth2AccessToken) {
             val username = "admin-update-both"
 
@@ -511,7 +535,11 @@ class IdentityApplicationTests {
         }
 
         @Test
-        @WithOAuthAuthorization(principalName = "test-admin", createAccessToken = true)
+        @WithOAuthAuthorization(
+            principalName = "test-admin",
+            authorizedScopes = ["openid", "profile", "accounts:admin"],
+            createAccessToken = true
+        )
         fun `deactivates an account without deleting it`(accessToken: OAuth2AccessToken) {
             val username = "admin-disable-account"
 

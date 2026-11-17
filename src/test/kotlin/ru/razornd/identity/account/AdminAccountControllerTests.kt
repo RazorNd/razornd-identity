@@ -55,7 +55,10 @@ class AdminAccountControllerTests {
     @MockitoBean
     lateinit var accountService: AccountService
 
-    val adminAuthorities = setOf(SimpleGrantedAuthority("ROLE_ADMIN"))
+    val adminAuthorities = setOf(
+        SimpleGrantedAuthority("ROLE_ADMIN"),
+        SimpleGrantedAuthority("SCOPE_accounts:admin"),
+    )
 
     @Test
     fun `creates an enabled account and returns generated password`() {
@@ -278,7 +281,30 @@ class AdminAccountControllerTests {
     fun `rejects authenticated non-admin requests`(method: String, uri: String) {
         val httpMethod = valueOf(method)
         mockMvc.request(httpMethod, uri) {
-            with(jwt().authorities(setOf(SimpleGrantedAuthority("ROLE_USER"))))
+            with(
+                jwt().authorities(
+                    setOf(
+                        SimpleGrantedAuthority("ROLE_USER"),
+                        SimpleGrantedAuthority("SCOPE_accounts:admin"),
+                    )
+                )
+            )
+        }.andExpect {
+            status { isForbidden() }
+        }
+    }
+
+    @ParameterizedTest(name = "{0} {1} without accounts:admin scope returns 403")
+    @CsvSource(
+        "POST, /api/admin/accounts",
+        "GET, /api/admin/accounts/existing-user",
+        "PATCH, /api/admin/accounts/existing-user",
+        "DELETE, /api/admin/accounts/existing-user",
+    )
+    fun `rejects authenticated requests without accounts admin scope`(method: String, uri: String) {
+        val httpMethod = valueOf(method)
+        mockMvc.request(httpMethod, uri) {
+            with(jwt().authorities(setOf(SimpleGrantedAuthority("ROLE_ADMIN"))))
         }.andExpect {
             status { isForbidden() }
         }

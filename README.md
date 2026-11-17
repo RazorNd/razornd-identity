@@ -84,7 +84,7 @@ identity:
         consent-visible: true
 ```
 
-The catalog includes the standard OpenID Connect scopes `openid`, `profile`, `email`, `address`, and `phone`; do not add these to configuration. The application fails to start if a configured scope duplicates another custom scope or uses one of these built-in names.
+The catalog includes the standard OpenID Connect scopes `openid`, `profile`, `email`, `address`, and `phone`, as well as the built-in `accounts:admin` scope required to manage user accounts; do not add these to configuration. The application fails to start if a configured scope duplicates another custom scope or uses one of these built-in names. Admin account API requests require both the `ADMIN` role and `accounts:admin` scope.
 
 `consent-visible` controls whether a scope is presented as a permission on the consent page. Scopes set to `false` are submitted with the form as hidden scope values and are granted only when the user approves the request. The consent page uses each visible scope's display name and description.
 

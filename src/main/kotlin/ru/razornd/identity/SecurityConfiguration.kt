@@ -26,6 +26,8 @@ import org.springframework.core.annotation.Order
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
 import org.springframework.security.authentication.DisabledException
+import org.springframework.security.authorization.AuthorizationDecision
+import org.springframework.security.authorization.AuthorizationManager
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.invoke
 import org.springframework.security.config.http.SessionCreationPolicy
@@ -97,6 +99,7 @@ class SecurityConfiguration {
         http {
             securityMatcher("/api/**")
             authorizeHttpRequests {
+                authorize("/api/admin/accounts/**", hasAllAuthorities("ROLE_ADMIN", "SCOPE_accounts:admin"))
                 authorize("/api/admin/**", hasRole("ADMIN"))
                 authorize(anyRequest, authenticated)
             }

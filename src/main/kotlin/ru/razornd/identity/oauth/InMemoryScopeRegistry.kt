@@ -84,6 +84,11 @@ class InMemoryScopeRegistry(configuredScopes: Collection<ScopeDefinition>) : Sco
                 displayName = "Phone number",
                 description = "Allows the application to access your phone number and whether it is verified.",
             ),
+            ScopeDefinition(
+                name = "accounts:admin",
+                displayName = "Manage accounts",
+                description = "Allows the application to create, view, update, and disable user accounts.",
+            ),
         )
     }
 }
