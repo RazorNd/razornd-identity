@@ -45,6 +45,14 @@ class InMemoryScopeRegistryTests {
                     "Allows the application to create, view, update, and disable user accounts.",
                 )
             )
+        assertThat(registry.find("clients:admin"))
+            .isEqualTo(
+                ScopeDefinition(
+                    "clients:admin",
+                    "Manage OAuth2 clients",
+                    "Allows the application to create, view, update, and delete OAuth2 clients.",
+                )
+            )
         assertThat(registry.requireAll(listOf("orders.read", OidcScopes.PROFILE)))
             .containsExactly(customScope, registry.find(OidcScopes.PROFILE))
     }

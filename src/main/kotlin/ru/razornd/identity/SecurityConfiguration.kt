@@ -100,6 +100,7 @@ class SecurityConfiguration {
             securityMatcher("/api/**")
             authorizeHttpRequests {
                 authorize("/api/admin/accounts/**", hasAllAuthorities("ROLE_ADMIN", "SCOPE_accounts:admin"))
+                authorize("/api/admin/clients/**", hasAllAuthorities("ROLE_ADMIN", "SCOPE_clients:admin"))
                 authorize("/api/admin/**", hasRole("ADMIN"))
                 authorize(anyRequest, authenticated)
             }

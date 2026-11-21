@@ -55,7 +55,10 @@ class AdminClientControllerTests {
     @MockitoBean
     lateinit var clientService: ClientService
 
-    private val adminAuthorities = setOf(SimpleGrantedAuthority("ROLE_ADMIN"))
+    private val adminAuthorities = setOf(
+        SimpleGrantedAuthority("ROLE_ADMIN"),
+        SimpleGrantedAuthority("SCOPE_clients:admin"),
+    )
     private val clientDetails = ClientDetails(
         clientId = "client-123",
         clientName = "Example client",
@@ -372,6 +375,17 @@ class AdminClientControllerTests {
         }.andExpect {
             status { isForbidden() }
         }
+    }
+
+    @Test
+    fun `rejects admin requests without the clients admin scope`() {
+        mockMvc.get("/api/admin/clients/client-123") {
+            with(jwt().authorities(setOf(SimpleGrantedAuthority("ROLE_ADMIN"))))
+        }.andExpect {
+            status { isForbidden() }
+        }
+
+        verifyNoInteractions(clientService)
     }
 
     @Test

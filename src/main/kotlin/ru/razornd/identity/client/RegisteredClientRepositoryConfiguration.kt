@@ -105,6 +105,7 @@ class RegisteredClientRepositoryConfiguration {
         .scope("openid")
         .scope("profile")
         .scope("accounts:admin")
+        .scope("clients:admin")
         .clientSettings(
             ClientSettings.builder()
                 .requireProofKey(true)

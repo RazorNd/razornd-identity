@@ -89,6 +89,11 @@ class InMemoryScopeRegistry(configuredScopes: Collection<ScopeDefinition>) : Sco
                 displayName = "Manage accounts",
                 description = "Allows the application to create, view, update, and disable user accounts.",
             ),
+            ScopeDefinition(
+                name = "clients:admin",
+                displayName = "Manage OAuth2 clients",
+                description = "Allows the application to create, view, update, and delete OAuth2 clients.",
+            ),
         )
     }
 }
