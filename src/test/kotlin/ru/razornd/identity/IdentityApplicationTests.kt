@@ -37,11 +37,14 @@ import org.springframework.test.context.jdbc.Sql
 import org.springframework.test.web.servlet.client.RestTestClient
 import org.springframework.test.web.servlet.client.expectBody
 import org.springframework.util.MultiValueMap
+import org.springframework.util.StringUtils
 import org.springframework.web.util.DefaultUriBuilderFactory
 import org.springframework.web.util.UriComponentsBuilder
 import ru.razornd.identity.account.CreatedAccountResponse
+import ru.razornd.identity.client.*
 import java.security.MessageDigest
 import java.security.SecureRandom
+import java.time.Duration
 import java.util.*
 import java.util.function.BiPredicate
 
@@ -554,6 +557,188 @@ class IdentityApplicationTests {
                 .withEqualsForFields(encodedPasswordMatches(), "password")
                 .isEqualTo(DatabaseAccount(password = "initial-password", enabled = false))
         }
+    }
+
+    @Nested
+    @Sql(
+        scripts = [
+            "classpath:sql/create-test-user.sql",
+            "classpath:sql/create-admin-account-test-users.sql",
+            "classpath:sql/create-registered-client-test-data.sql",
+        ]
+    )
+    @Sql(
+        statements = ["DELETE FROM oauth2_registered_client WHERE id = 'fixture-id'"],
+        executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD,
+    )
+    inner class AdminClientApiTests {
+        @Test
+        @WithOAuthAuthorization(
+            principalName = "test-admin",
+            authorizedScopes = ["openid", "profile", "clients:admin"],
+            createAccessToken = true
+        )
+        fun `creates a client with a generated secret`(accessToken: OAuth2AccessToken) {
+            client.post()
+                .uri("/api/admin/clients")
+                .headers { it.setBearerAuth(accessToken.tokenValue) }
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(
+                    mapOf(
+                        "clientName" to "Admin-created client",
+                        "clientAuthenticationMethods" to listOf("client_secret_basic"),
+                        "authorizationGrantTypes" to listOf("client_credentials"),
+                        "scopes" to listOf("openid", "profile"),
+                    )
+                )
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody<CreatedClientResponse>()
+                .consumeWith { result ->
+                    val createdClient = checkNotNull(result.responseBody)
+                    assertThat(createdClient)
+                        .usingRecursiveComparison()
+                        .ignoringCollectionOrder()
+                        .ignoringFields("clientId", "clientSecret")
+                        .isEqualTo(
+                            CreatedClientResponse(
+                                clientId = "",
+                                clientSecret = null,
+                                clientName = "Admin-created client",
+                                clientAuthenticationMethods = setOf(ClientAuthenticationMethod.CLIENT_SECRET_BASIC),
+                                authorizationGrantTypes = setOf(ClientAuthorizationGrantType.CLIENT_CREDENTIALS),
+                                redirectUris = emptySet(),
+                                scopes = setOf("openid", "profile"),
+                                tokenSettings = ClientTokenSettings(),
+                            )
+                        )
+                    val secret = checkNotNull(createdClient.clientSecret)
+                    assertThat(secret).isNotBlank()
+                    assertThat(result.responseHeaders.location)
+                        .hasToString("http://localhost:$port/api/admin/clients/${createdClient.clientId}")
+                    assertThat(findClientRow(createdClient.clientId))
+                        .usingRecursiveComparison()
+                        .withEqualsForFields(encodedPasswordMatches(), "client_secret")
+                        .withEqualsForFields(scopesMatch(), "scopes")
+                        .isEqualTo(
+                            mapOf(
+                                "client_id" to createdClient.clientId,
+                                "client_secret" to secret,
+                                "client_name" to "Admin-created client",
+                                "client_authentication_methods" to "client_secret_basic",
+                                "authorization_grant_types" to "client_credentials",
+                                "scopes" to "openid,profile",
+                            )
+                        )
+                }
+        }
+
+        @Test
+        @WithOAuthAuthorization(
+            principalName = "test-admin",
+            authorizedScopes = ["openid", "profile", "clients:admin"],
+            createAccessToken = true
+        )
+        fun `gets an existing client without exposing its secret`(accessToken: OAuth2AccessToken) {
+            client.get()
+                .uri("/api/admin/clients/fixture-client")
+                .headers { it.setBearerAuth(accessToken.tokenValue) }
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.clientId").isEqualTo("fixture-client")
+                .jsonPath("$.clientSecret").doesNotHaveJsonPath()
+        }
+
+        @Test
+        @WithOAuthAuthorization(
+            principalName = "test-admin",
+            authorizedScopes = ["openid", "profile", "clients:admin"],
+            createAccessToken = true
+        )
+        fun `updates client metadata`(accessToken: OAuth2AccessToken) {
+            client.patch()
+                .uri("/api/admin/clients/fixture-client")
+                .headers { it.setBearerAuth(accessToken.tokenValue) }
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(mapOf("clientName" to "Updated client", "scopes" to mapOf("add" to listOf("email"))))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody<ClientResponse>()
+                .value {
+                    assertThat(it)
+                        .usingRecursiveComparison()
+                        .ignoringCollectionOrder()
+                        .isEqualTo(
+                            ClientResponse(
+                                clientId = "fixture-client",
+                                clientName = "Updated client",
+                                clientAuthenticationMethods = setOf(ClientAuthenticationMethod.CLIENT_SECRET_BASIC),
+                                authorizationGrantTypes = setOf(ClientAuthorizationGrantType.AUTHORIZATION_CODE),
+                                redirectUris = setOf("https://fixture.example/callback"),
+                                scopes = setOf("profile", "email"),
+                                tokenSettings = ClientTokenSettings(
+                                    authorizationCodeTimeToLive = Duration.ofMinutes(3),
+                                    accessTokenTimeToLive = Duration.ofMinutes(7),
+                                    refreshTokenTimeToLive = Duration.ofHours(2),
+                                ),
+                            )
+                        )
+                }
+
+            assertThat(findClientRow("fixture-client"))
+                .usingRecursiveComparison()
+                .withEqualsForFields(scopesMatch(), "scopes")
+                .isEqualTo(
+                    mapOf(
+                        "client_id" to "fixture-client",
+                        "client_secret" to "fixture-secret",
+                        "client_name" to "Updated client",
+                        "client_authentication_methods" to "client_secret_basic",
+                        "authorization_grant_types" to "authorization_code",
+                        "scopes" to "profile,email",
+                    )
+                )
+        }
+
+        @Test
+        @WithOAuthAuthorization(
+            principalName = "test-admin",
+            authorizedScopes = ["openid", "profile", "clients:admin"],
+            createAccessToken = true
+        )
+        fun `deletes a client`(accessToken: OAuth2AccessToken) {
+            client.delete()
+                .uri("/api/admin/clients/fixture-client")
+                .headers { it.setBearerAuth(accessToken.tokenValue) }
+                .exchange()
+                .expectStatus().isNoContent()
+
+            val rowExists =
+                jdbcClient.sql("SELECT COUNT(*) > 0 FROM oauth2_registered_client WHERE client_id = :clientId")
+                    .param("clientId", "fixture-client")
+                    .query(Boolean::class.java)
+                    .single()
+            assertThat(rowExists).isFalse()
+        }
+
+        private fun findClientRow(clientId: String): Map<String, Any?> =
+            jdbcClient.sql(
+                """
+                    SELECT client_id, client_secret, client_name, client_authentication_methods,
+                           authorization_grant_types, scopes
+                    FROM oauth2_registered_client
+                    WHERE client_id = :clientId
+                """.trimIndent()
+            )
+                .param("clientId", clientId)
+                .query()
+                .singleRow()
+
+        private fun scopesMatch(): BiPredicate<String, String> =
+            BiPredicate { actual, expected ->
+                StringUtils.commaDelimitedListToSet(actual) == StringUtils.commaDelimitedListToSet(expected)
+            }
     }
 
     private fun findDatabaseAccount(username: String): DatabaseAccount =
