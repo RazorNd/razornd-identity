@@ -45,6 +45,8 @@ class InMemoryScopeRegistry(configuredScopes: Collection<ScopeDefinition>) : Sco
         scopes = (standardScopes + configuredScopes).associateBy { it.name }
     }
 
+    override fun findAll(): List<ScopeDefinition> = scopes.values.toList()
+
     override fun find(name: String): ScopeDefinition? = scopes[name]
 
     override fun requireAll(names: Collection<String>): List<ScopeDefinition> {

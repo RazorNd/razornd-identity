@@ -58,6 +58,16 @@ class InMemoryScopeRegistryTests {
     }
 
     @Test
+    fun `findAll returns standard and configured scopes`() {
+        val customScope = ScopeDefinition("orders.read", "Read orders", "Allows reading orders.")
+        val registry = InMemoryScopeRegistry(listOf(customScope))
+
+        assertThat(registry.findAll().map { it.name }).containsExactlyInAnyOrder(
+            "openid", "profile", "email", "address", "phone", "accounts:admin", "clients:admin", "orders.read",
+        )
+    }
+
+    @Test
     fun `rejects unsupported scopes`() {
         val registry = InMemoryScopeRegistry(emptyList())
 

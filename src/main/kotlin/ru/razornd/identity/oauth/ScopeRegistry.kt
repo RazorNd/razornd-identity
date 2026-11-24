@@ -18,6 +18,9 @@ package ru.razornd.identity.oauth
 
 /** Looks up the scope definitions supported by this identity server. */
 interface ScopeRegistry {
+    /** Returns all supported scope definitions. */
+    fun findAll(): List<ScopeDefinition>
+
     /** Returns the definition for [name], or `null` when the scope is unsupported. */
     fun find(name: String): ScopeDefinition?
 

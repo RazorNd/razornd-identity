@@ -60,6 +60,9 @@ import java.util.function.BiPredicate
         "identity.oauth2.clients.test.redirect-uris=/",
         "identity.oauth2.clients.test.scopes=openid,profile,accounts:admin",
         "identity.oauth2.clients.test.require-authorization-consent=true",
+        "identity.oauth2.scopes[0].name=orders.read",
+        "identity.oauth2.scopes[0].display-name=Read orders",
+        "identity.oauth2.scopes[0].description=Allows reading orders.",
         "identity.signing-key.location=classpath:test-signing-keys.p12",
         "identity.signing-key.store-password=test-store-password",
         "identity.signing-key.key-passwords[test-signing-key]=test-store-password",
@@ -183,6 +186,29 @@ class IdentityApplicationTests {
             .jsonPath("$.token_endpoint").isEqualTo("http://localhost:$port/oauth2/token")
             .jsonPath("$.userinfo_endpoint").isEqualTo("http://localhost:$port/userinfo")
             .jsonPath("$.end_session_endpoint").isEqualTo("http://localhost:$port/connect/logout")
+    }
+
+    @Test
+    fun openIdProviderConfigurationListsSupportedScopes() {
+        client.get()
+            .uri("/.well-known/openid-configuration")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody()
+            .jsonPath("$.scopes_supported").value<List<String>> {
+                assertThat(it)
+                    .contains(
+                        "openid",
+                        "profile",
+                        "email",
+                        "address",
+                        "phone",
+                        "accounts:admin",
+                        "clients:admin",
+                        "orders.read"
+                    )
+                assertThat(it.count { scope -> scope == "openid" }).isEqualTo(1)
+            }
     }
 
     @Test

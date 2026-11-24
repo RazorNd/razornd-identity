@@ -42,6 +42,7 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher
 import org.springframework.security.web.util.matcher.NegatedRequestMatcher
 import org.springframework.security.web.util.matcher.OrRequestMatcher
+import ru.razornd.identity.oauth.ScopeRegistry
 import ru.razornd.identity.security.UserDetailsJwtAuthenticationConverter
 import javax.sql.DataSource
 import kotlin.reflect.jvm.jvmName
@@ -63,10 +64,19 @@ class SecurityConfiguration {
 
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
-    fun authorizationServerSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
+    fun authorizationServerSecurityFilterChain(http: HttpSecurity, scopeRegistry: ScopeRegistry): SecurityFilterChain {
         http.oauth2AuthorizationServer { authorizationServer ->
             http.securityMatcher(authorizationServer.endpointsMatcher)
-            authorizationServer.oidc { }
+            authorizationServer.oidc { oidc ->
+                oidc.providerConfigurationEndpoint { endpoint ->
+                    endpoint.providerConfigurationCustomizer { configuration ->
+                        configuration.scopes { scopes ->
+                            scopes.clear()
+                            scopes.addAll(scopeRegistry.findAll().map { it.name })
+                        }
+                    }
+                }
+            }
             authorizationServer.authorizationEndpoint { endpoint ->
                 endpoint.consentPage("/oauth2/consent")
             }

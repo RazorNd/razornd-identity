@@ -38,6 +38,7 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.*
 import ru.razornd.identity.SecurityConfiguration
+import ru.razornd.identity.oauth.ScopeRegistry
 import java.time.Duration
 
 @Import(SecurityConfiguration::class)
@@ -46,7 +47,7 @@ import java.time.Duration
     OAuth2AuthorizationServerJwtAutoConfiguration::class,
     OAuth2AuthorizationServerAutoConfiguration::class,
 )
-@MockitoBean(types = [UserDetailsService::class, RegisteredClientRepository::class])
+@MockitoBean(types = [UserDetailsService::class, RegisteredClientRepository::class, ScopeRegistry::class])
 @WebMvcTest(AdminClientController::class)
 class AdminClientControllerTests {
     @Autowired
