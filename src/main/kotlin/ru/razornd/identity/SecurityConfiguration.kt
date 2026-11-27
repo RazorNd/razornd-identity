@@ -26,8 +26,6 @@ import org.springframework.core.annotation.Order
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
 import org.springframework.security.authentication.DisabledException
-import org.springframework.security.authorization.AuthorizationDecision
-import org.springframework.security.authorization.AuthorizationManager
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.invoke
 import org.springframework.security.config.http.SessionCreationPolicy
@@ -42,6 +40,9 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher
 import org.springframework.security.web.util.matcher.NegatedRequestMatcher
 import org.springframework.security.web.util.matcher.OrRequestMatcher
+import org.springframework.web.cors.CorsConfiguration
+import org.springframework.web.cors.CorsUtils
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 import ru.razornd.identity.oauth.ScopeRegistry
 import ru.razornd.identity.security.UserDetailsJwtAuthenticationConverter
 import javax.sql.DataSource
@@ -65,8 +66,22 @@ class SecurityConfiguration {
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     fun authorizationServerSecurityFilterChain(http: HttpSecurity, scopeRegistry: ScopeRegistry): SecurityFilterChain {
+        val publicMetadataEndpoints = listOf(
+            "/.well-known/openid-configuration",
+            "/.well-known/oauth-authorization-server",
+            "/oauth2/jwks",
+        )
+        val corsEndpoints = publicMetadataEndpoints + listOf("/oauth2/token", "/userinfo")
+        val corsPaths = OrRequestMatcher(
+            corsEndpoints.map { PathPatternRequestMatcher.withDefaults().matcher(it) }
+        )
         http.oauth2AuthorizationServer { authorizationServer ->
-            http.securityMatcher(authorizationServer.endpointsMatcher)
+            http.securityMatcher(
+                OrRequestMatcher(
+                    authorizationServer.endpointsMatcher,
+                    { request -> CorsUtils.isPreFlightRequest(request) && corsPaths.matches(request) },
+                )
+            )
             authorizationServer.oidc { oidc ->
                 oidc.providerConfigurationEndpoint { endpoint ->
                     endpoint.providerConfigurationCustomizer { configuration ->
@@ -87,6 +102,25 @@ class SecurityConfiguration {
                 authorize(anyRequest, authenticated)
             }
             oauth2ResourceServer { jwt { } }
+            cors {
+                configurationSource = UrlBasedCorsConfigurationSource().apply {
+                    val metadataCors = CorsConfiguration().apply {
+                        allowedOrigins = listOf("*")
+                        allowedMethods = listOf("GET")
+                    }
+                    publicMetadataEndpoints.forEach { registerCorsConfiguration(it, metadataCors) }
+                    registerCorsConfiguration("/oauth2/token", CorsConfiguration().apply {
+                        allowedOrigins = listOf("*")
+                        allowedMethods = listOf("POST")
+                        allowedHeaders = listOf("Content-Type")
+                    })
+                    registerCorsConfiguration("/userinfo", CorsConfiguration().apply {
+                        allowedOrigins = listOf("*")
+                        allowedMethods = listOf("GET", "POST")
+                        allowedHeaders = listOf("Authorization", "Content-Type")
+                    })
+                }
+            }
             exceptionHandling {
                 defaultAuthenticationEntryPointFor(
                     entryPoint = LoginUrlAuthenticationEntryPoint("/login"),

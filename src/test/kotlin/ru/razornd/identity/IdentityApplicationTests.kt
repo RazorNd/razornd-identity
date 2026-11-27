@@ -22,12 +22,16 @@ import com.microsoft.playwright.options.AriaRole
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT
 import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -172,6 +176,77 @@ class IdentityApplicationTests {
                 val header = String(Base64.getUrlDecoder().decode(accessToken.substringBefore('.')))
                 assertThat(header).contains("\"kid\":\"test-signing-key\"")
             }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["/.well-known/openid-configuration", "/.well-known/oauth-authorization-server", "/oauth2/jwks"])
+    fun publicOpenIdEndpointsAllowCrossOriginGet(endpoint: String) {
+        client.get()
+            .uri(endpoint)
+            .header(HttpHeaders.ORIGIN, "https://app.example.com")
+            .exchange()
+            .expectStatus().isOk()
+            .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "/.well-known/openid-configuration, GET, GET",
+        "/.well-known/oauth-authorization-server, GET, GET",
+        "/oauth2/jwks, GET, GET",
+        "/oauth2/token, POST, POST",
+        "/userinfo, GET, 'GET,POST'",
+        "/userinfo, POST, 'GET,POST'",
+    )
+    fun oauthEndpointsAllowCrossOriginPreflight(endpoint: String, method: String, allowedMethods: String) {
+        client.options()
+            .uri(endpoint)
+            .header(HttpHeaders.ORIGIN, "https://app.example.com")
+            .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, method)
+            .exchange()
+            .expectStatus().isOk()
+            .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+            .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, allowedMethods)
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "/oauth2/token, POST, Content-Type",
+        "/userinfo, GET, Authorization",
+        "/userinfo, POST, 'Authorization, Content-Type'",
+    )
+    fun oauthEndpointsAllowRequiredCrossOriginHeaders(endpoint: String, method: String, headers: String) {
+        client.options()
+            .uri(endpoint)
+            .header(HttpHeaders.ORIGIN, "https://app.example.com")
+            .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, method)
+            .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, headers)
+            .exchange()
+            .expectStatus().isOk()
+            .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+            .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS, headers)
+    }
+
+    @ParameterizedTest
+    @CsvSource("/oauth2/token, GET", "/userinfo, DELETE")
+    fun oauthEndpointsRejectUnsupportedCrossOriginMethods(endpoint: String, method: String) {
+        client.options()
+            .uri(endpoint)
+            .header(HttpHeaders.ORIGIN, "https://app.example.com")
+            .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, method)
+            .exchange()
+            .expectStatus().isForbidden()
+            .expectHeader().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN)
+    }
+
+    @Test
+    fun authorizationEndpointDoesNotAllowCrossOriginPreflight() {
+        client.options()
+            .uri("/oauth2/authorize")
+            .header(HttpHeaders.ORIGIN, "https://app.example.com")
+            .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET")
+            .exchange()
+            .expectHeader().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN)
     }
 
     @Test
